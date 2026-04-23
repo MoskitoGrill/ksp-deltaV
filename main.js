@@ -8,7 +8,9 @@ const baseDvMap = {
   Eve: 1800,
   Kerbin: 0,
   Duna: 1300,
-  Jool: 2700
+  Dres: 2200,
+  Jool: 2700,
+  Eeloo: 3400
 };
 
 const planets = [
@@ -34,7 +36,7 @@ const planets = [
     realSemiMajorAxis: 13599840256,
     orbitalPeriod: 9203545,
     color: "blue",
-    angle: 0 // reference
+    angle: 0
   },
   {
     name: "Duna",
@@ -42,7 +44,15 @@ const planets = [
     realSemiMajorAxis: 20726155264,
     orbitalPeriod: 17315400,
     color: "orange",
-    angle: -0.75 // ~ -43° → blízko ideálního okna
+    angle: -0.75
+  },
+  {
+    name: "Dres",
+    orbitRadius: 220,
+    realSemiMajorAxis: 40839348203,
+    orbitalPeriod: 47893063,
+    color: "sandybrown",
+    angle: 1.8
   },
   {
     name: "Jool",
@@ -51,6 +61,14 @@ const planets = [
     orbitalPeriod: 104661432,
     color: "green",
     angle: 1.2
+  },
+  {
+    name: "Eeloo",
+    orbitRadius: 320,
+    realSemiMajorAxis: 90118820000,
+    orbitalPeriod: 156992048,
+    color: "white",
+    angle: 2.8
   }
 ];
 
@@ -177,7 +195,7 @@ function draw() {
     ctx.fillText("Target: žádný", 20, 55);
     ctx.fillText("Δv: -", 20, 80);
   }
-  
+
   requestAnimationFrame(draw);
 }
 

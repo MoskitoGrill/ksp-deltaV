@@ -2,6 +2,7 @@ const canvas = document.getElementById("spaceCanvas");
 const ctx = canvas.getContext("2d");
 
 let selectedPlanet = null;
+let marginPercent = 40;
 
 const baseDvMap = {
   Moho: 7600,
@@ -72,6 +73,16 @@ const planets = [
   }
 ];
 
+const marginInput = document.getElementById("marginInput");
+
+marginInput.addEventListener("input", () => {
+  const value = Number(marginInput.value);
+
+  if (Number.isFinite(value) && value >= 0) {
+    marginPercent = value;
+  }
+});
+
 // resize canvas na celou obrazovku
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -113,6 +124,11 @@ function getPlanetPosition(planet, centerX, centerY) {
 function getBaseDvToPlanet(planet) {
   if (!planet) return null;
   return baseDvMap[planet.name] ?? null;
+}
+
+function applyMargin(baseDv, marginPercent) {
+  if (baseDv === null || baseDv === undefined) return null;
+  return Math.round(baseDv * (1 + marginPercent / 100));
 }
 
 // render loop
@@ -175,6 +191,7 @@ function draw() {
   });
 
     // informační panel
+    // informační panel
   ctx.fillStyle = "white";
   ctx.font = "16px Arial";
   ctx.textAlign = "left";
@@ -182,18 +199,23 @@ function draw() {
   ctx.fillText("Origin: Kerbin", 20, 30);
 
   if (selectedPlanet) {
-    const dv = getBaseDvToPlanet(selectedPlanet);
+    const baseDv = getBaseDvToPlanet(selectedPlanet);
+    const finalDv = applyMargin(baseDv, marginPercent);
 
     ctx.fillText(`Target: ${selectedPlanet.name}`, 20, 55);
 
-    if (dv !== null) {
-      ctx.fillText(`Δv: ${dv} m/s`, 20, 80);
+    if (baseDv !== null) {
+      ctx.fillText(`Base Δv: ${baseDv} m/s`, 20, 80);
+      ctx.fillText(`Margin: ${marginPercent}%`, 20, 105);
+      ctx.fillText(`Total Δv: ${finalDv} m/s`, 20, 130);
     } else {
       ctx.fillText("Δv: není k dispozici", 20, 80);
     }
   } else {
     ctx.fillText("Target: žádný", 20, 55);
-    ctx.fillText("Δv: -", 20, 80);
+    ctx.fillText("Base Δv: -", 20, 80);
+    ctx.fillText(`Margin: ${marginPercent}%`, 20, 105);
+    ctx.fillText("Total Δv: -", 20, 130);
   }
 
   requestAnimationFrame(draw);

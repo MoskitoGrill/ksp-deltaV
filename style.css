@@ -7,3 +7,26 @@ body {
 canvas {
   display: block;
 }
+
+#uiPanel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+
+#uiPanel input {
+  width: 70px;
+  margin-left: 8px;
+  background: #111;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 4px 6px;
+}

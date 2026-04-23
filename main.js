@@ -3,6 +3,14 @@ const ctx = canvas.getContext("2d");
 
 let selectedPlanet = null;
 
+const baseDvMap = {
+  Moho: 7600,
+  Eve: 1800,
+  Kerbin: 0,
+  Duna: 1300,
+  Jool: 2700
+};
+
 const planets = [
   {
     name: "Moho",
@@ -84,6 +92,11 @@ function getPlanetPosition(planet, centerX, centerY) {
   return { x, y };
 }
 
+function getBaseDvToPlanet(planet) {
+  if (!planet) return null;
+  return baseDvMap[planet.name] ?? null;
+}
+
 // render loop
 function draw() {
   // vyčistit plochu
@@ -143,6 +156,28 @@ function draw() {
     ctx.fillText(planet.name, pos.x + 8, pos.y + 4);
   });
 
+    // informační panel
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  ctx.textAlign = "left";
+
+  ctx.fillText("Origin: Kerbin", 20, 30);
+
+  if (selectedPlanet) {
+    const dv = getBaseDvToPlanet(selectedPlanet);
+
+    ctx.fillText(`Target: ${selectedPlanet.name}`, 20, 55);
+
+    if (dv !== null) {
+      ctx.fillText(`Δv: ${dv} m/s`, 20, 80);
+    } else {
+      ctx.fillText("Δv: není k dispozici", 20, 80);
+    }
+  } else {
+    ctx.fillText("Target: žádný", 20, 55);
+    ctx.fillText("Δv: -", 20, 80);
+  }
+  
   requestAnimationFrame(draw);
 }
 

@@ -1,6 +1,8 @@
 const canvas = document.getElementById("spaceCanvas");
 const ctx = canvas.getContext("2d");
 
+let selectedPlanet = null;
+
 const planets = [
   {
     name: "Moho",
@@ -50,6 +52,29 @@ function resizeCanvas() {
   canvas.height = window.innerHeight;
 }
 
+canvas.addEventListener("click", (event) => {
+  const rect = canvas.getBoundingClientRect();
+
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  planets.forEach(planet => {
+    const pos = getPlanetPosition(planet, centerX, centerY);
+
+    const dx = mouseX - pos.x;
+    const dy = mouseY - pos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 8) { // klik radius
+      selectedPlanet = planet;
+      console.log("Vybraná planeta:", planet.name);
+    }
+  });
+});
+
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
@@ -90,7 +115,26 @@ function draw() {
     // planeta
     ctx.fillStyle = planet.color;
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
+    
+    const isSelected = selectedPlanet === planet;
+
+    // větší radius pokud je vybraná
+    const radius = isSelected ? 8 : 5;
+
+    // glow efekt
+    if (isSelected) {
+    ctx.shadowColor = "white";
+    ctx.shadowBlur = 10;
+    }
+
+    ctx.fillStyle = planet.color;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // reset shadow
+    ctx.shadowBlur = 0;
+
     ctx.fill();
 
     // název

@@ -1,6 +1,49 @@
 const canvas = document.getElementById("spaceCanvas");
 const ctx = canvas.getContext("2d");
 
+const planets = [
+  {
+    name: "Moho",
+    orbitRadius: 60,
+    realSemiMajorAxis: 5263138304,
+    orbitalPeriod: 2215754,
+    color: "gray",
+    angle: 0.5
+  },
+  {
+    name: "Eve",
+    orbitRadius: 100,
+    realSemiMajorAxis: 9832684544,
+    orbitalPeriod: 5657995,
+    color: "purple",
+    angle: 2.5
+  },
+  {
+    name: "Kerbin",
+    orbitRadius: 140,
+    realSemiMajorAxis: 13599840256,
+    orbitalPeriod: 9203545,
+    color: "blue",
+    angle: 0 // reference
+  },
+  {
+    name: "Duna",
+    orbitRadius: 180,
+    realSemiMajorAxis: 20726155264,
+    orbitalPeriod: 17315400,
+    color: "orange",
+    angle: -0.75 // ~ -43° → blízko ideálního okna
+  },
+  {
+    name: "Jool",
+    orbitRadius: 260,
+    realSemiMajorAxis: 68773560320,
+    orbitalPeriod: 104661432,
+    color: "green",
+    angle: 1.2
+  }
+];
+
 // resize canvas na celou obrazovku
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -9,6 +52,12 @@ function resizeCanvas() {
 
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
+
+function getPlanetPosition(planet, centerX, centerY) {
+  const x = centerX + planet.orbitRadius * Math.cos(planet.angle);
+  const y = centerY + planet.orbitRadius * Math.sin(planet.angle);
+  return { x, y };
+}
 
 // render loop
 function draw() {
@@ -20,10 +69,35 @@ function draw() {
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
 
+  // ☀️ Slunce
   ctx.fillStyle = "yellow";
   ctx.beginPath();
   ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
   ctx.fill();
+
+  // 🟢 ORBITY
+  planets.forEach(planet => {
+    ctx.strokeStyle = "rgba(255,255,255,0.2)";
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, planet.orbitRadius, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  // 🔵 PLANETY
+  planets.forEach(planet => {
+    const pos = getPlanetPosition(planet, centerX, centerY);
+
+    // planeta
+    ctx.fillStyle = planet.color;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // název
+    ctx.fillStyle = "white";
+    ctx.font = "12px Arial";
+    ctx.fillText(planet.name, pos.x + 8, pos.y + 4);
+  });
 
   requestAnimationFrame(draw);
 }

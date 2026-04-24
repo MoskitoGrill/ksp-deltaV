@@ -24,6 +24,66 @@ const KSP_SECONDS_PER_HOUR = KSP_SECONDS_PER_MINUTE * KSP_MINUTES_PER_HOUR;
 const KSP_SECONDS_PER_DAY = KSP_SECONDS_PER_HOUR * KSP_HOURS_PER_DAY;
 const KSP_SECONDS_PER_YEAR = KSP_SECONDS_PER_DAY * KSP_DAYS_PER_YEAR;
 
+const dvMatrix = {
+  Moho: {
+    Eve: 20188,
+    Kerbin: 5768,
+    Duna: 9702,
+    Dres: 8918,
+    Jool: 12285,
+    Eeloo: 10864
+  },
+  Eve: {
+    Moho: 20188,
+    Kerbin: 14644,
+    Duna: 18578,
+    Dres: 17794,
+    Jool: 21161,
+    Eeloo: 19740
+  },
+  Kerbin: {
+    Kerbol: 36070,
+    Moho: 8350,
+    Eve: 5830,
+    Duna: 5110,
+    Dres: 6650,
+    Jool: 8310,
+    Eeloo: 7600
+  },
+  Duna: {
+    Moho: 9702,
+    Eve: 18578,
+    Kerbin: 4158,
+    Dres: 7308,
+    Jool: 10675,
+    Eeloo: 9254
+  },
+  Dres: {
+    Moho: 8918,
+    Eve: 17794,
+    Kerbin: 3374,
+    Duna: 7308,
+    Jool: 9891,
+    Eeloo: 8470
+  },
+  Jool: {
+    Moho: 12285,
+    Eve: 21161,
+    Kerbin: 6741,
+    Duna: 10675,
+    Dres: 9891,
+    Eeloo: 11837
+  },
+  Eeloo: {
+    Moho: 10864,
+    Eve: 19740,
+    Kerbin: 5320,
+    Duna: 9254,
+    Dres: 8470,
+    Jool: 11837
+  }
+};
+
 const baseDvMap = {
   Kerbol: 36070,
   Moho: 8350,
@@ -448,9 +508,19 @@ function isPointOnKerbol(x, y) {
   return distance < 14;
 }
 
+function getBaseDvToTarget(targetName) {
+  if (!targetName) return null;
+
+  if (selectedOrigin === targetName) {
+    return 0;
+  }
+
+  return dvMatrix[selectedOrigin]?.[targetName] ?? null;
+}
+
 function getBaseDvToPlanet(planet) {
   if (!planet) return null;
-  return baseDvMap[planet.name] ?? null;
+  return getBaseDvToTarget(planet.name);
 }
 
 function applyMargin(baseDv, marginPercent) {
@@ -766,7 +836,7 @@ function draw() {
   ctx.fillText(`Move whole system: ${moveWholeSystem ? "ON" : "OFF"}`, 20, 205);
 
   if (selectedTargetType === "kerbol") {
-    const baseDv = baseDvMap.Kerbol;
+    const baseDv = getBaseDvToTarget("Kerbol");
     const finalDv = applyMargin(baseDv, marginPercent);
 
     ctx.fillText("Target: Kerbol", 20, 55);

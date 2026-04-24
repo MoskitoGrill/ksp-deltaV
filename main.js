@@ -4,6 +4,8 @@ const ctx = canvas.getContext("2d");
 let selectedPlanet = null;
 let marginPercent = 40;
 let time = 0;
+let draggedPlanet = null;
+let isDraggingPlanet = false;
 
 const KSP_SECONDS_PER_MINUTE = 60;
 const KSP_MINUTES_PER_HOUR = 60;
@@ -230,27 +232,35 @@ function resizeCanvas() {
   canvas.height = window.innerHeight;
 }
 
-canvas.addEventListener("click", (event) => {
-  const rect = canvas.getBoundingClientRect();
+canvas.addEventListener("mousedown", (event) => {
+  const mouse = getMousePosition(event);
+  const planet = findPlanetAtPosition(mouse.x, mouse.y);
 
-  const mouseX = event.clientX - rect.left;
-  const mouseY = event.clientY - rect.top;
+  if (!planet || planet.name === "Kerbin") return;if (!planet) return;
+
+  selectedPlanet = planet;
+  draggedPlanet = planet;
+  isDraggingPlanet = true;
+
+  console.log("Vybraná planeta:", planet.name);
+});
+
+canvas.addEventListener("mousemove", (event) => {
+  if (!isDraggingPlanet || !draggedPlanet) return;
+
+  const mouse = getMousePosition(event);
 
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
 
-  planets.forEach(planet => {
-    const pos = getPlanetPosition(planet, centerX, centerY);
+  const newAngle = getAngleFromPoint(mouse.x, mouse.y, centerX, centerY);
 
-    const dx = mouseX - pos.x;
-    const dy = mouseY - pos.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+  draggedPlanet.manualAngle = newAngle;
+});
 
-    if (distance < 8) { // klik radius
-      selectedPlanet = planet;
-      console.log("Vybraná planeta:", planet.name);
-    }
-  });
+window.addEventListener("mouseup", () => {
+  isDraggingPlanet = false;
+  draggedPlanet = null;
 });
 
 window.addEventListener("resize", resizeCanvas);
@@ -261,6 +271,38 @@ function getPlanetPosition(planet, centerX, centerY) {
   const x = centerX + planet.orbitRadius * Math.cos(angle);
   const y = centerY + planet.orbitRadius * Math.sin(angle);
   return { x, y };
+}
+
+function getMousePosition(event) {
+  const rect = canvas.getBoundingClientRect();
+
+  return {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+}
+
+function getAngleFromPoint(x, y, centerX, centerY) {
+  return normalizeAngle(Math.atan2(y - centerY, x - centerX));
+}
+
+function findPlanetAtPosition(x, y) {
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  for (const planet of planets) {
+    const pos = getPlanetPosition(planet, centerX, centerY);
+
+    const dx = x - pos.x;
+    const dy = y - pos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 10) {
+      return planet;
+    }
+  }
+
+  return null;
 }
 
 function getBaseDvToPlanet(planet) {
@@ -343,9 +385,8 @@ function draw() {
     ctx.beginPath();
     
     const isSelected = selectedPlanet === planet;
-
-    // větší radius pokud je vybraná
-    const radius = isSelected ? 8 : 5;
+    const hasManualAngle = planet.manualAngle !== null;
+    const radius = isSelected ? 8 : hasManualAngle ? 7 : 5;
 
     // glow efekt
     if (isSelected) {
@@ -357,6 +398,15 @@ function draw() {
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
     ctx.fill();
+
+    if (hasManualAngle) {
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius + 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+    }
 
     // reset shadow
     ctx.shadowBlur = 0;

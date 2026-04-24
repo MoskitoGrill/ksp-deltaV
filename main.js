@@ -470,6 +470,46 @@ function getCurrentDvEstimate(planet) {
   };
 }
 
+function findNextTransferWindow(planet) {
+  const angleData = transferAngleMap[planet?.name];
+
+  if (!planet || !angleData || planet.name === "Kerbin") {
+    return null;
+  }
+
+  const currentPhaseRad = degToRad(getCurrentPhaseAngle(planet));
+  const idealPhaseRad = degToRad(angleData.transferAngle);
+
+  const relativeSpeed = getRelativeAngularSpeedToKerbin(planet);
+
+  if (relativeSpeed === 0) {
+    return null;
+  }
+
+  // rozdíl mezi aktuálním a ideálním úhlem
+  let deltaAngle = angleDifference(idealPhaseRad, currentPhaseRad);
+
+  // čas do dosažení ideálního úhlu
+  let timeToWindow = deltaAngle / relativeSpeed;
+
+  // pokud vyjde minulost, posuň o synodickou periodu dopředu
+  const synodicPeriod = (Math.PI * 2) / Math.abs(relativeSpeed);
+
+  while (timeToWindow < 0) {
+    timeToWindow += synodicPeriod;
+  }
+
+  const windowTime = time + timeToWindow;
+  const baseDv = getBaseDvToPlanet(planet);
+
+  return {
+    time: windowTime,
+    timeFromNow: timeToWindow,
+    errorDeg: 0,
+    dv: baseDv
+  };
+}
+
 function clearManualAngles() {
   planets.forEach(planet => {
     planet.manualAngle = null;
@@ -479,6 +519,24 @@ function clearManualAngles() {
 function formatKspTime(totalSeconds) {
   const parts = secondsToKspParts(totalSeconds);
   return `Year ${parts.year}, Day ${parts.day}, ${parts.hour}h ${parts.minute}m`;
+}
+
+function formatDuration(totalSeconds) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+
+  const years = Math.floor(safeSeconds / KSP_SECONDS_PER_YEAR);
+  const secondsAfterYears = safeSeconds % KSP_SECONDS_PER_YEAR;
+
+  const days = Math.floor(secondsAfterYears / KSP_SECONDS_PER_DAY);
+  const secondsAfterDays = secondsAfterYears % KSP_SECONDS_PER_DAY;
+
+  const hours = Math.floor(secondsAfterDays / KSP_SECONDS_PER_HOUR);
+  const minutes = Math.floor((secondsAfterDays % KSP_SECONDS_PER_HOUR) / KSP_SECONDS_PER_MINUTE);
+
+  if (years > 0) return `${years}y ${days}d ${hours}h ${minutes}m`;
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
 }
 
 function getPlanetAngle(planet, time) {
@@ -625,6 +683,17 @@ function draw() {
       ctx.fillText(`Phase: ${dvEstimate.currentPhase.toFixed(1)}°`, 20, 230);
       ctx.fillText(`Ideal: ${dvEstimate.idealPhase.toFixed(1)}°`, 20, 255);
       ctx.fillText(`Error: ${dvEstimate.errorDeg.toFixed(1)}°`, 20, 280);
+      const windowEstimate = findNextTransferWindow(selectedPlanet);
+
+      if (windowEstimate) {
+        const windowDvWithMargin = applyMargin(windowEstimate.dv, marginPercent);
+
+        ctx.fillText(`Window in: ${formatDuration(windowEstimate.timeFromNow)}`, 20, 315);
+        ctx.fillText(`Window time: ${formatKspTime(windowEstimate.time)}`, 20, 340);
+        ctx.fillText(`Window error: ${windowEstimate.errorDeg.toFixed(1)}°`, 20, 365);
+        ctx.fillText(`Window Δv + margin: ${windowDvWithMargin} m/s`, 20, 390);
+      }
+
     } else {
       const baseDv = getBaseDvToPlanet(selectedPlanet);
       const finalDv = applyMargin(baseDv, marginPercent);

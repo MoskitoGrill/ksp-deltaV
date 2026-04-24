@@ -407,6 +407,69 @@ function normalizeAngle(angle) {
   return ((angle % twoPi) + twoPi) % twoPi;
 }
 
+function degToRad(degrees) {
+  return degrees * Math.PI / 180;
+}
+
+function radToDeg(radians) {
+  return radians * 180 / Math.PI;
+}
+
+function normalizeDegrees(degrees) {
+  return ((degrees % 360) + 360) % 360;
+}
+
+function getCurrentPhaseAngle(targetPlanet) {
+  const kerbin = planets.find(p => p.name === "Kerbin");
+
+  if (!targetPlanet || !kerbin || targetPlanet.name === "Kerbin") {
+    return null;
+  }
+
+  const targetAngle = getPlanetAngle(targetPlanet, time);
+  const kerbinAngle = getPlanetAngle(kerbin, time);
+
+  const phaseRad = angleDifference(targetAngle, kerbinAngle);
+  return radToDeg(phaseRad);
+}
+
+function getCurrentDvEstimate(planet) {
+  const baseDv = getBaseDvToPlanet(planet);
+  const angleData = transferAngleMap[planet?.name];
+
+  if (baseDv === null || !angleData) {
+    return null;
+  }
+
+  const currentPhase = getCurrentPhaseAngle(planet);
+  const idealPhase = angleData.transferAngle;
+
+  if (currentPhase === null) {
+    return null;
+  }
+
+  const error = Math.abs(angleDifference(
+    degToRad(currentPhase),
+    degToRad(idealPhase)
+  ));
+
+  const errorDeg = Math.abs(radToDeg(error));
+
+  // Jednoduchá heuristika:
+  // 0° chyba = 0% navíc
+  // 90° chyba = cca +80%
+  // 180° chyba = cca +160%
+  const penaltyMultiplier = 1 + (errorDeg / 90) * 0.8;
+
+  return {
+    baseDv,
+    currentPhase,
+    idealPhase,
+    errorDeg,
+    estimatedDv: Math.round(baseDv * penaltyMultiplier)
+  };
+}
+
 function clearManualAngles() {
   planets.forEach(planet => {
     planet.manualAngle = null;
@@ -548,23 +611,33 @@ function draw() {
   ctx.fillText(`Move whole system: ${moveWholeSystem ? "ON" : "OFF"}`, 20, 205);
 
   if (selectedPlanet) {
-    const baseDv = getBaseDvToPlanet(selectedPlanet);
-    const finalDv = applyMargin(baseDv, marginPercent);
+    const dvEstimate = getCurrentDvEstimate(selectedPlanet);
 
     ctx.fillText(`Target: ${selectedPlanet.name}`, 20, 55);
 
-    if (baseDv !== null) {
-      ctx.fillText(`Base Δv: ${baseDv} m/s`, 20, 80);
-      ctx.fillText(`Margin: ${marginPercent}%`, 20, 105);
-      ctx.fillText(`Total Δv: ${finalDv} m/s`, 20, 130);
+    if (dvEstimate) {
+      const finalDv = applyMargin(dvEstimate.estimatedDv, marginPercent);
+
+      ctx.fillText(`Ideal Δv: ${dvEstimate.baseDv} m/s`, 20, 80);
+      ctx.fillText(`Now Δv: ${dvEstimate.estimatedDv} m/s`, 20, 105);
+      ctx.fillText(`Total + margin: ${finalDv} m/s`, 20, 130);
+
+      ctx.fillText(`Phase: ${dvEstimate.currentPhase.toFixed(1)}°`, 20, 230);
+      ctx.fillText(`Ideal: ${dvEstimate.idealPhase.toFixed(1)}°`, 20, 255);
+      ctx.fillText(`Error: ${dvEstimate.errorDeg.toFixed(1)}°`, 20, 280);
     } else {
-      ctx.fillText("Δv: není k dispozici", 20, 80);
+      const baseDv = getBaseDvToPlanet(selectedPlanet);
+      const finalDv = applyMargin(baseDv, marginPercent);
+
+      ctx.fillText(`Ideal Δv: ${baseDv ?? "-"} m/s`, 20, 80);
+      ctx.fillText(`Now Δv: není k dispozici`, 20, 105);
+      ctx.fillText(`Total + margin: ${finalDv ?? "-"} m/s`, 20, 130);
     }
   } else {
     ctx.fillText("Target: žádný", 20, 55);
-    ctx.fillText("Base Δv: -", 20, 80);
-    ctx.fillText(`Margin: ${marginPercent}%`, 20, 105);
-    ctx.fillText("Total Δv: -", 20, 130);
+    ctx.fillText("Ideal Δv: -", 20, 80);
+    ctx.fillText("Now Δv: -", 20, 105);
+    ctx.fillText("Total + margin: -", 20, 130);
   }
 
   requestAnimationFrame(draw);

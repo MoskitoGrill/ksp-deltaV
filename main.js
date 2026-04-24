@@ -5,6 +5,15 @@ let selectedPlanet = null;
 let marginPercent = 40;
 let time = 0;
 
+const KSP_SECONDS_PER_MINUTE = 60;
+const KSP_MINUTES_PER_HOUR = 60;
+const KSP_HOURS_PER_DAY = 6;
+const KSP_DAYS_PER_YEAR = 426;
+
+const KSP_SECONDS_PER_HOUR = KSP_SECONDS_PER_MINUTE * KSP_MINUTES_PER_HOUR;
+const KSP_SECONDS_PER_DAY = KSP_SECONDS_PER_HOUR * KSP_HOURS_PER_DAY;
+const KSP_SECONDS_PER_YEAR = KSP_SECONDS_PER_DAY * KSP_DAYS_PER_YEAR;
+
 const baseDvMap = {
   Moho: 7600,
   Eve: 1800,
@@ -84,15 +93,125 @@ marginInput.addEventListener("input", () => {
   }
 });
 
-const timeInput = document.getElementById("timeInput");
+const yearInput = document.getElementById("yearInput");
+const dayInput = document.getElementById("dayInput");
+const hourInput = document.getElementById("hourInput");
+const minuteInput = document.getElementById("minuteInput");
+const timeBackButton = document.getElementById("timeBackButton");
+const timeForwardButton = document.getElementById("timeForwardButton");
 const timeLabel = document.getElementById("timeLabel");
 
-timeInput.addEventListener("input", () => {
-  time = Number(timeInput.value);
-  timeLabel.textContent = `${time.toLocaleString()} s`;
+let timeHoldInterval = null;
+let timeHoldTimeout = null;
+let timeHoldSpeed = 1;
+
+function kspDateToSeconds(year, day, hour, minute) {
+  const safeYear = Math.max(1, Number(year) || 1);
+  const safeDay = Math.min(KSP_DAYS_PER_YEAR, Math.max(1, Number(day) || 1));
+  const safeHour = Math.min(KSP_HOURS_PER_DAY - 1, Math.max(0, Number(hour) || 0));
+  const safeMinute = Math.min(59, Math.max(0, Number(minute) || 0));
+
+  return (
+    (safeYear - 1) * KSP_SECONDS_PER_YEAR +
+    (safeDay - 1) * KSP_SECONDS_PER_DAY +
+    safeHour * KSP_SECONDS_PER_HOUR +
+    safeMinute * KSP_SECONDS_PER_MINUTE
+  );
+}
+
+function secondsToKspParts(totalSeconds) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+
+  const year = Math.floor(safeSeconds / KSP_SECONDS_PER_YEAR) + 1;
+
+  const secondsIntoYear = safeSeconds % KSP_SECONDS_PER_YEAR;
+  const day = Math.floor(secondsIntoYear / KSP_SECONDS_PER_DAY) + 1;
+
+  const secondsIntoDay = secondsIntoYear % KSP_SECONDS_PER_DAY;
+  const hour = Math.floor(secondsIntoDay / KSP_SECONDS_PER_HOUR);
+
+  const secondsIntoHour = secondsIntoDay % KSP_SECONDS_PER_HOUR;
+  const minute = Math.floor(secondsIntoHour / KSP_SECONDS_PER_MINUTE);
+
+  return { year, day, hour, minute };
+}
+
+function updateTimeUiFromTime() {
+  const parts = secondsToKspParts(time);
+
+  yearInput.value = parts.year;
+  dayInput.value = parts.day;
+  hourInput.value = parts.hour;
+  minuteInput.value = parts.minute;
+
+  timeLabel.textContent = formatKspTime(time);
+}
+
+function updateTimeFromInputs() {
+  time = kspDateToSeconds(
+    yearInput.value,
+    dayInput.value,
+    hourInput.value,
+    minuteInput.value
+  );
+
+  updateTimeUiFromTime();
+}
+
+function changeTimeByMinutes(minutes) {
+  time = Math.max(0, time + minutes * KSP_SECONDS_PER_MINUTE);
+  updateTimeUiFromTime();
+}
+
+[yearInput, dayInput, hourInput, minuteInput].forEach(input => {
+  input.addEventListener("change", updateTimeFromInputs);
 });
 
-timeLabel.textContent = `${time.toLocaleString()} s`;
+function startTimeHold(direction) {
+  changeTimeByMinutes(direction * 10);
+
+  timeHoldSpeed = 10;
+
+  timeHoldTimeout = setTimeout(() => {
+    timeHoldInterval = setInterval(() => {
+      changeTimeByMinutes(direction * timeHoldSpeed);
+
+      if (timeHoldSpeed < 1440) {
+        timeHoldSpeed *= 2;
+      }
+    }, 120);
+  }, 350);
+}
+
+function stopTimeHold() {
+  clearTimeout(timeHoldTimeout);
+  clearInterval(timeHoldInterval);
+
+  timeHoldTimeout = null;
+  timeHoldInterval = null;
+  timeHoldSpeed = 1;
+}
+
+timeBackButton.addEventListener("mousedown", () => startTimeHold(-1));
+timeForwardButton.addEventListener("mousedown", () => startTimeHold(1));
+
+window.addEventListener("mouseup", stopTimeHold);
+window.addEventListener("mouseleave", stopTimeHold);
+
+timeBackButton.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  startTimeHold(-1);
+});
+
+timeForwardButton.addEventListener("touchstart", (event) => {
+  event.preventDefault();
+  startTimeHold(1);
+});
+
+window.addEventListener("touchend", stopTimeHold);
+window.addEventListener("touchcancel", stopTimeHold);
+
+updateTimeUiFromTime();
 
 // resize canvas na celou obrazovku
 function resizeCanvas() {
@@ -146,6 +265,11 @@ function applyMargin(baseDv, marginPercent) {
 function normalizeAngle(angle) {
   const twoPi = Math.PI * 2;
   return ((angle % twoPi) + twoPi) % twoPi;
+}
+
+function formatKspTime(totalSeconds) {
+  const parts = secondsToKspParts(totalSeconds);
+  return `Year ${parts.year}, Day ${parts.day}, ${parts.hour}h ${parts.minute}m`;
 }
 
 function getPlanetAngle(planet, time) {
@@ -216,8 +340,6 @@ function draw() {
     // reset shadow
     ctx.shadowBlur = 0;
 
-    ctx.fill();
-
     // název
     ctx.fillStyle = "white";
     ctx.font = "12px Arial";
@@ -231,7 +353,7 @@ function draw() {
 
   ctx.fillText("Origin: Kerbin", 20, 30);
 
-  ctx.fillText(`Time: ${time.toLocaleString()} s`, 20, 155);
+  ctx.fillText(`Time: ${formatKspTime(time)}`, 20, 155);
   
   if (selectedPlanet) {
     const baseDv = getBaseDvToPlanet(selectedPlanet);

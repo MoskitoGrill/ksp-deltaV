@@ -35,3 +35,41 @@ canvas {
   width: 220px;
   margin-top: 6px;
 }
+
+.timeInputs {
+  display: grid;
+  grid-template-columns: 45px 70px;
+  gap: 6px 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.timeInputs label {
+  font-size: 13px;
+}
+
+.timeInputs input {
+  width: 70px;
+  box-sizing: border-box;
+}
+
+.timeButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.timeButtons button {
+  width: 32px;
+  height: 32px;
+  background: #111;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.timeButtons button:hover {
+  background: #222;
+}

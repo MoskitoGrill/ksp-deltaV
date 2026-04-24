@@ -23,13 +23,40 @@ const KSP_SECONDS_PER_DAY = KSP_SECONDS_PER_HOUR * KSP_HOURS_PER_DAY;
 const KSP_SECONDS_PER_YEAR = KSP_SECONDS_PER_DAY * KSP_DAYS_PER_YEAR;
 
 const baseDvMap = {
-  Moho: 7600,
-  Eve: 1800,
+  Moho: 8350,
+  Eve: 5830,
   Kerbin: 0,
-  Duna: 1300,
-  Dres: 2200,
-  Jool: 2700,
-  Eeloo: 3400
+  Duna: 5110,
+  Dres: 6650,
+  Jool: 8310,
+  Eeloo: 7600
+};
+
+const transferAngleMap = {
+  Moho: {
+    transferAngle: 108.2,
+    returnAngle: 76
+  },
+  Eve: {
+    transferAngle: -54.1,
+    returnAngle: 36.1
+  },
+  Duna: {
+    transferAngle: 44.4,
+    returnAngle: -75.2
+  },
+  Dres: {
+    transferAngle: 82.1,
+    returnAngle: 30.3
+  },
+  Jool: {
+    transferAngle: 96.6,
+    returnAngle: -48.7
+  },
+  Eeloo: {
+    transferAngle: 101,
+    returnAngle: -80
+  }
 };
 
 const planets = [

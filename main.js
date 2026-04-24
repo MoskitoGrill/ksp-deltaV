@@ -10,6 +10,8 @@ let moveWholeSystem = false;
 let dragStartTime = 0;
 let dragStartAngle = 0;
 let lastDragAngle = 0;
+let accumulatedDragDeltaAngle = 0;
+let dragStartPlanetAngles = new Map();
 
 const KSP_SECONDS_PER_MINUTE = 60;
 const KSP_MINUTES_PER_HOUR = 60;
@@ -37,7 +39,7 @@ const planets = [
     realSemiMajorAxis: 5263138304,
     orbitalPeriod: 2215754,
     color: "gray",
-    baseAngle: 0.5,
+    baseAngle: 1.4835,
     manualAngle: null
   },
   {
@@ -46,7 +48,7 @@ const planets = [
     realSemiMajorAxis: 9832684544,
     orbitalPeriod: 5657995,
     color: "purple",
-    baseAngle: 2.5,
+    baseAngle: 0.2618,
     manualAngle: null
   },
   {
@@ -64,7 +66,7 @@ const planets = [
     realSemiMajorAxis: 20726155264,
     orbitalPeriod: 17315400,
     color: "orange",
-    baseAngle: -0.75,
+    baseAngle: 2.3649,
     manualAngle: null
   },
   {
@@ -73,7 +75,7 @@ const planets = [
     realSemiMajorAxis: 40839348203,
     orbitalPeriod: 47893063,
     color: "sandybrown",
-    baseAngle: 1.8,
+    baseAngle: 0.1745,
     manualAngle: null
   },
   {
@@ -82,7 +84,7 @@ const planets = [
     realSemiMajorAxis: 68773560320,
     orbitalPeriod: 104661432,
     color: "green",
-    baseAngle: 1.2,
+    baseAngle: -2.1347,
     manualAngle: null
   },
   {
@@ -91,7 +93,7 @@ const planets = [
     realSemiMajorAxis: 90118820000,
     orbitalPeriod: 156992048,
     color: "white",
-    baseAngle: 2.8,
+    baseAngle: -0.8727,
     manualAngle: null
   }
 ];
@@ -261,6 +263,13 @@ canvas.addEventListener("mousedown", (event) => {
   dragStartTime = time;
   dragStartAngle = getPlanetAngle(planet, time);
   lastDragAngle = dragStartAngle;
+  accumulatedDragDeltaAngle = 0;
+
+  dragStartPlanetAngles = new Map();
+
+  planets.forEach(p => {
+    dragStartPlanetAngles.set(p.name, getPlanetAngle(p, time));
+  });
 
   console.log("Vybraná planeta:", planet.name);
 });
@@ -275,18 +284,33 @@ canvas.addEventListener("mousemove", (event) => {
 
   const newAngle = getAngleFromPoint(mouse.x, mouse.y, centerX, centerY);
 
+  let deltaAngleStep = newAngle - lastDragAngle;
+
+  if (deltaAngleStep > Math.PI) deltaAngleStep -= Math.PI * 2;
+  if (deltaAngleStep < -Math.PI) deltaAngleStep += Math.PI * 2;
+
   if (moveWholeSystem) {
-    let deltaAngle = newAngle - lastDragAngle;
+    const draggedRelativeSpeed = getRelativeAngularSpeedToKerbin(draggedPlanet);
 
-    if (deltaAngle > Math.PI) deltaAngle -= Math.PI * 2;
-    if (deltaAngle < -Math.PI) deltaAngle += Math.PI * 2;
+    if (draggedRelativeSpeed !== 0) {
+      accumulatedDragDeltaAngle += deltaAngleStep;
 
-    planets.forEach(planet => {
-      if (planet.name === "Kerbin") return;
+      const deltaTime = accumulatedDragDeltaAngle / draggedRelativeSpeed;
 
-      const currentAngle = getPlanetAngle(planet, time);
-      planet.manualAngle = normalizeAngle(currentAngle + deltaAngle);
-    });
+      if (!hasManualOverrides()) {
+        time = Math.max(0, dragStartTime + deltaTime);
+        updateTimeUiFromTime();
+      } else {
+        planets.forEach(planet => {
+          if (planet.name === "Kerbin") return;
+
+          const startAngle = dragStartPlanetAngles.get(planet.name);
+          const planetRelativeSpeed = getRelativeAngularSpeedToKerbin(planet);
+
+          planet.manualAngle = normalizeAngle(startAngle + planetRelativeSpeed * deltaTime);
+        });
+      }
+    }
   } else {
     draggedPlanet.manualAngle = newAngle;
   }
@@ -421,6 +445,10 @@ function getTimeFromDragDelta(planet, newAngle) {
   const deltaTime = deltaAngle / relativeSpeed;
 
   return Math.max(0, dragStartTime + deltaTime);
+}
+
+function hasManualOverrides() {
+  return planets.some(planet => planet.manualAngle !== null);
 }
 
 // render loop

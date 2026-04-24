@@ -287,6 +287,8 @@ function resizeCanvas() {
 }
 
 canvas.addEventListener("mousedown", (event) => {
+  if (event.button !== 0) return; // jen levé tlačítko
+
   const mouse = getMousePosition(event);
 
   if (isPointOnKerbol(mouse.x, mouse.y)) {

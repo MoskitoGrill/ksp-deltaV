@@ -73,3 +73,12 @@ canvas {
 .timeButtons button:hover {
   background: #222;
 }
+
+.systemShiftControl {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.systemShiftControl input {
+  margin-right: 6px;
+}

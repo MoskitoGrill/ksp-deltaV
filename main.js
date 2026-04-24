@@ -6,6 +6,10 @@ let marginPercent = 40;
 let time = 0;
 let draggedPlanet = null;
 let isDraggingPlanet = false;
+let moveWholeSystem = false;
+let dragStartTime = 0;
+let dragStartAngle = 0;
+let lastDragAngle = 0;
 
 const KSP_SECONDS_PER_MINUTE = 60;
 const KSP_MINUTES_PER_HOUR = 60;
@@ -226,6 +230,12 @@ window.addEventListener("touchcancel", stopTimeHold);
 
 updateTimeUiFromTime();
 
+const moveWholeSystemInput = document.getElementById("moveWholeSystemInput");
+
+moveWholeSystemInput.addEventListener("change", () => {
+  moveWholeSystem = moveWholeSystemInput.checked;
+});
+
 // resize canvas na celou obrazovku
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -236,11 +246,14 @@ canvas.addEventListener("mousedown", (event) => {
   const mouse = getMousePosition(event);
   const planet = findPlanetAtPosition(mouse.x, mouse.y);
 
-  if (!planet || planet.name === "Kerbin") return;if (!planet) return;
+  if (!planet || planet.name === "Kerbin") return;
 
   selectedPlanet = planet;
   draggedPlanet = planet;
   isDraggingPlanet = true;
+  dragStartTime = time;
+  dragStartAngle = getPlanetAngle(planet, time);
+  lastDragAngle = dragStartAngle;
 
   console.log("Vybraná planeta:", planet.name);
 });
@@ -255,7 +268,29 @@ canvas.addEventListener("mousemove", (event) => {
 
   const newAngle = getAngleFromPoint(mouse.x, mouse.y, centerX, centerY);
 
-  draggedPlanet.manualAngle = newAngle;
+  if (moveWholeSystem) {
+    const relativeSpeed = getRelativeAngularSpeedToKerbin(draggedPlanet);
+
+    if (relativeSpeed !== 0) {
+      // rozdíl mezi posledním a novým úhlem
+      let deltaAngle = newAngle - lastDragAngle;
+
+      // unwrap (abychom nepřeskočili ±π)
+      if (deltaAngle > Math.PI) deltaAngle -= Math.PI * 2;
+      if (deltaAngle < -Math.PI) deltaAngle += Math.PI * 2;
+
+      const deltaTime = deltaAngle / relativeSpeed;
+
+      time = Math.max(0, time + deltaTime);
+      updateTimeUiFromTime();
+    }
+
+    clearManualAngles();
+  } else {
+    draggedPlanet.manualAngle = newAngle;
+  }
+
+  lastDragAngle = newAngle;
 });
 
 window.addEventListener("mouseup", () => {
@@ -332,12 +367,16 @@ function formatKspTime(totalSeconds) {
 }
 
 function getPlanetAngle(planet, time) {
+  if (planet.manualAngle !== null && planet.manualAngle !== undefined) {
+    return planet.manualAngle;
+  }
+
+  return getTimeBasedPlanetAngle(planet, time);
+}
+
+function getTimeBasedPlanetAngle(planet, timeValue) {
   const kerbin = planets.find(p => p.name === "Kerbin");
 
-    if (planet.manualAngle !== null && planet.manualAngle !== undefined) {
-      return planet.manualAngle;
-    }
-    
   if (!planet.orbitalPeriod || !kerbin?.orbitalPeriod) {
     return planet.baseAngle ?? 0;
   }
@@ -346,10 +385,41 @@ function getPlanetAngle(planet, time) {
     return 0;
   }
 
-  const planetProgress = (time / planet.orbitalPeriod) * Math.PI * 2;
-  const kerbinProgress = (time / kerbin.orbitalPeriod) * Math.PI * 2;
+  const planetProgress = (timeValue / planet.orbitalPeriod) * Math.PI * 2;
+  const kerbinProgress = (timeValue / kerbin.orbitalPeriod) * Math.PI * 2;
 
   return normalizeAngle((planet.baseAngle ?? 0) + planetProgress - kerbinProgress);
+}
+
+function angleDifference(a, b) {
+  const diff = normalizeAngle(a - b);
+  return diff > Math.PI ? diff - Math.PI * 2 : diff;
+}
+
+function getRelativeAngularSpeedToKerbin(planet) {
+  const kerbin = planets.find(p => p.name === "Kerbin");
+
+  if (!planet.orbitalPeriod || !kerbin?.orbitalPeriod || planet.name === "Kerbin") {
+    return 0;
+  }
+
+  const planetAngularSpeed = (Math.PI * 2) / planet.orbitalPeriod;
+  const kerbinAngularSpeed = (Math.PI * 2) / kerbin.orbitalPeriod;
+
+  return planetAngularSpeed - kerbinAngularSpeed;
+}
+
+function getTimeFromDragDelta(planet, newAngle) {
+  const relativeSpeed = getRelativeAngularSpeedToKerbin(planet);
+
+  if (relativeSpeed === 0) {
+    return time;
+  }
+
+  const deltaAngle = angleDifference(newAngle, dragStartAngle);
+  const deltaTime = deltaAngle / relativeSpeed;
+
+  return Math.max(0, dragStartTime + deltaTime);
 }
 
 // render loop
@@ -428,6 +498,7 @@ function draw() {
   
   const manualCount = planets.filter(planet => planet.manualAngle !== null).length;
   ctx.fillText(`Manual overrides: ${manualCount}`, 20, 180);
+  ctx.fillText(`Move whole system: ${moveWholeSystem ? "ON" : "OFF"}`, 20, 205);
 
   if (selectedPlanet) {
     const baseDv = getBaseDvToPlanet(selectedPlanet);

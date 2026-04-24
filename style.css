@@ -30,3 +30,8 @@ canvas {
   border: 1px solid rgba(255,255,255,0.25);
   padding: 4px 6px;
 }
+
+#uiPanel input[type="range"] {
+  width: 220px;
+  margin-top: 6px;
+}

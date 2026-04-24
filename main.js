@@ -3,6 +3,7 @@ const ctx = canvas.getContext("2d");
 
 let selectedPlanet = null;
 let marginPercent = 40;
+let time = 0;
 
 const baseDvMap = {
   Moho: 7600,
@@ -21,7 +22,7 @@ const planets = [
     realSemiMajorAxis: 5263138304,
     orbitalPeriod: 2215754,
     color: "gray",
-    angle: 0.5
+    baseAngle: 0.5
   },
   {
     name: "Eve",
@@ -29,7 +30,7 @@ const planets = [
     realSemiMajorAxis: 9832684544,
     orbitalPeriod: 5657995,
     color: "purple",
-    angle: 2.5
+    baseAngle: 2.5
   },
   {
     name: "Kerbin",
@@ -37,7 +38,7 @@ const planets = [
     realSemiMajorAxis: 13599840256,
     orbitalPeriod: 9203545,
     color: "blue",
-    angle: 0
+    baseAngle: 0
   },
   {
     name: "Duna",
@@ -45,7 +46,7 @@ const planets = [
     realSemiMajorAxis: 20726155264,
     orbitalPeriod: 17315400,
     color: "orange",
-    angle: -0.75
+    baseAngle: -0.75
   },
   {
     name: "Dres",
@@ -53,7 +54,7 @@ const planets = [
     realSemiMajorAxis: 40839348203,
     orbitalPeriod: 47893063,
     color: "sandybrown",
-    angle: 1.8
+    baseAngle: 1.8
   },
   {
     name: "Jool",
@@ -61,7 +62,7 @@ const planets = [
     realSemiMajorAxis: 68773560320,
     orbitalPeriod: 104661432,
     color: "green",
-    angle: 1.2
+    baseAngle: 1.2
   },
   {
     name: "Eeloo",
@@ -69,7 +70,7 @@ const planets = [
     realSemiMajorAxis: 90118820000,
     orbitalPeriod: 156992048,
     color: "white",
-    angle: 2.8
+    baseAngle: 2.8
   }
 ];
 
@@ -82,6 +83,16 @@ marginInput.addEventListener("input", () => {
     marginPercent = value;
   }
 });
+
+const timeInput = document.getElementById("timeInput");
+const timeLabel = document.getElementById("timeLabel");
+
+timeInput.addEventListener("input", () => {
+  time = Number(timeInput.value);
+  timeLabel.textContent = `${time.toLocaleString()} s`;
+});
+
+timeLabel.textContent = `${time.toLocaleString()} s`;
 
 // resize canvas na celou obrazovku
 function resizeCanvas() {
@@ -116,8 +127,9 @@ window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
 function getPlanetPosition(planet, centerX, centerY) {
-  const x = centerX + planet.orbitRadius * Math.cos(planet.angle);
-  const y = centerY + planet.orbitRadius * Math.sin(planet.angle);
+  const angle = getPlanetAngle(planet, time);
+  const x = centerX + planet.orbitRadius * Math.cos(angle);
+  const y = centerY + planet.orbitRadius * Math.sin(angle);
   return { x, y };
 }
 
@@ -129,6 +141,28 @@ function getBaseDvToPlanet(planet) {
 function applyMargin(baseDv, marginPercent) {
   if (baseDv === null || baseDv === undefined) return null;
   return Math.round(baseDv * (1 + marginPercent / 100));
+}
+
+function normalizeAngle(angle) {
+  const twoPi = Math.PI * 2;
+  return ((angle % twoPi) + twoPi) % twoPi;
+}
+
+function getPlanetAngle(planet, time) {
+  const kerbin = planets.find(p => p.name === "Kerbin");
+
+  if (!planet.orbitalPeriod || !kerbin?.orbitalPeriod) {
+    return planet.baseAngle ?? 0;
+  }
+
+  if (planet.name === "Kerbin") {
+    return 0;
+  }
+
+  const planetProgress = (time / planet.orbitalPeriod) * Math.PI * 2;
+  const kerbinProgress = (time / kerbin.orbitalPeriod) * Math.PI * 2;
+
+  return normalizeAngle((planet.baseAngle ?? 0) + planetProgress - kerbinProgress);
 }
 
 // render loop
@@ -191,13 +225,14 @@ function draw() {
   });
 
     // informační panel
-    // informační panel
   ctx.fillStyle = "white";
   ctx.font = "16px Arial";
   ctx.textAlign = "left";
 
   ctx.fillText("Origin: Kerbin", 20, 30);
 
+  ctx.fillText(`Time: ${time.toLocaleString()} s`, 20, 155);
+  
   if (selectedPlanet) {
     const baseDv = getBaseDvToPlanet(selectedPlanet);
     const finalDv = applyMargin(baseDv, marginPercent);

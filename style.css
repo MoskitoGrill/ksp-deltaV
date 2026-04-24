@@ -82,3 +82,18 @@ canvas {
 .systemShiftControl input {
   margin-right: 6px;
 }
+
+.originControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.originControl select {
+  background: #111;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.25);
+  padding: 4px 6px;
+  border-radius: 4px;
+}

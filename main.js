@@ -146,6 +146,11 @@ const timeBackButton = document.getElementById("timeBackButton");
 const timeForwardButton = document.getElementById("timeForwardButton");
 const timeLabel = document.getElementById("timeLabel");
 const resetDayOneButton = document.getElementById("resetDayOneButton");
+const originSelect = document.getElementById("originSelect");
+
+originSelect.addEventListener("change", () => {
+  selectedOrigin = originSelect.value;
+});
 
 let timeHoldInterval = null;
 let timeHoldTimeout = null;
@@ -293,10 +298,17 @@ canvas.addEventListener("mousedown", (event) => {
 
   const planet = findPlanetAtPosition(mouse.x, mouse.y);
 
-  if (!planet || planet.name === "Kerbin") return;
+  if (!planet) return;
 
   selectedTargetType = "planet";
   selectedPlanet = planet;
+
+  // Kerbin jde vybrat jako cíl, ale zatím ho netaháme
+  if (planet.name === "Kerbin") {
+    console.log("Vybraný target:", planet.name);
+    return;
+  }
+
   draggedPlanet = planet;
   isDraggingPlanet = true;
   dragStartTime = time;
@@ -363,7 +375,7 @@ canvas.addEventListener("contextmenu", (event) => {
   const mouse = getMousePosition(event);
 
   if (isPointOnKerbol(mouse.x, mouse.y)) {
-    selectedOrigin = "Kerbol";
+    setOrigin("Kerbol");
     console.log("Origin = Kerbol");
     return;
   }
@@ -371,7 +383,7 @@ canvas.addEventListener("contextmenu", (event) => {
   const planet = findPlanetAtPosition(mouse.x, mouse.y);
 
   if (planet) {
-    selectedOrigin = planet.name;
+    setOrigin(planet.name);
     console.log("Origin =", planet.name);
   }
 });
@@ -564,6 +576,11 @@ function clearManualAngles() {
   planets.forEach(planet => {
     planet.manualAngle = null;
   });
+}
+
+function setOrigin(originName) {
+  selectedOrigin = originName;
+  originSelect.value = originName;
 }
 
 function formatKspTime(totalSeconds) {

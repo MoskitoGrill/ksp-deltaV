@@ -629,8 +629,15 @@ function findNextTransferWindow(planet) {
 
   const synodicPeriod = (Math.PI * 2) / Math.abs(relativeSpeed);
 
-  while (timeToWindow < 0) {
-    timeToWindow += synodicPeriod;
+  // Pokud jsme extrémně blízko okna, bereme to jako "teď"
+  const windowTolerance = KSP_SECONDS_PER_HOUR * 6;
+
+  if (Math.abs(timeToWindow) <= windowTolerance) {
+    timeToWindow = 0;
+  } else {
+    while (timeToWindow < 0) {
+      timeToWindow += synodicPeriod;
+    }
   }
 
   const windowTime = time + timeToWindow;
@@ -938,7 +945,11 @@ function draw() {
       if (windowEstimate) {
         const windowDvWithMargin = applyMargin(windowEstimate.dv, marginPercent);
 
-        ctx.fillText(`Window in: ${formatDuration(windowEstimate.timeFromNow)}`, 20, 315);
+        const windowText = windowEstimate.timeFromNow === 0
+          ? "now"
+          : formatDuration(windowEstimate.timeFromNow);
+
+        ctx.fillText(`Window in: ${windowText}`, 20, 315);ctx.fillText(`Window in: ${formatDuration(windowEstimate.timeFromNow)}`, 20, 315);
         ctx.fillText(`Window time: ${formatKspTime(windowEstimate.time)}`, 20, 340);
         ctx.fillText(`Window error: ${windowEstimate.errorDeg.toFixed(1)}°`, 20, 365);
         ctx.fillText(`Window Δv + margin: ${windowDvWithMargin} m/s`, 20, 390);

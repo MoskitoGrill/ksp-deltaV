@@ -2,6 +2,7 @@ const canvas = document.getElementById("spaceCanvas");
 const ctx = canvas.getContext("2d");
 
 let selectedPlanet = null;
+let selectedTargetType = "planet";
 let marginPercent = 40;
 let time = 0;
 let draggedPlanet = null;
@@ -23,6 +24,7 @@ const KSP_SECONDS_PER_DAY = KSP_SECONDS_PER_HOUR * KSP_HOURS_PER_DAY;
 const KSP_SECONDS_PER_YEAR = KSP_SECONDS_PER_DAY * KSP_DAYS_PER_YEAR;
 
 const baseDvMap = {
+  Kerbol: 36070,
   Moho: 8350,
   Eve: 5830,
   Kerbin: 0,
@@ -280,10 +282,19 @@ function resizeCanvas() {
 
 canvas.addEventListener("mousedown", (event) => {
   const mouse = getMousePosition(event);
+
+  if (isPointOnKerbol(mouse.x, mouse.y)) {
+    selectedPlanet = null;
+    selectedTargetType = "kerbol";
+    console.log("Vybraný target: Kerbol");
+    return;
+  }
+
   const planet = findPlanetAtPosition(mouse.x, mouse.y);
 
   if (!planet || planet.name === "Kerbin") return;
 
+  selectedTargetType = "planet";
   selectedPlanet = planet;
   draggedPlanet = planet;
   isDraggingPlanet = true;
@@ -390,6 +401,17 @@ function findPlanetAtPosition(x, y) {
   }
 
   return null;
+}
+
+function isPointOnKerbol(x, y) {
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  const dx = x - centerX;
+  const dy = y - centerY;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  return distance < 14;
 }
 
 function getBaseDvToPlanet(planet) {
@@ -610,10 +632,19 @@ function draw() {
   const centerY = canvas.height / 2;
 
   // ☀️ Slunce
+  const isKerbolSelected = selectedTargetType === "kerbol";
+
+  if (isKerbolSelected) {
+    ctx.shadowColor = "yellow";
+    ctx.shadowBlur = 15;
+  }
+
   ctx.fillStyle = "yellow";
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 10, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, isKerbolSelected ? 14 : 10, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.shadowBlur = 0;
 
   // 🟢 ORBITY
   planets.forEach(planet => {
@@ -668,7 +699,20 @@ function draw() {
   ctx.fillText(`Manual overrides: ${manualCount}`, 20, 180);
   ctx.fillText(`Move whole system: ${moveWholeSystem ? "ON" : "OFF"}`, 20, 205);
 
-  if (selectedPlanet) {
+  if (selectedTargetType === "kerbol") {
+    const baseDv = baseDvMap.Kerbol;
+    const finalDv = applyMargin(baseDv, marginPercent);
+
+    ctx.fillText("Target: Kerbol", 20, 55);
+    ctx.fillText(`Ideal Δv: ${baseDv} m/s`, 20, 80);
+    ctx.fillText("Now Δv: same as ideal", 20, 105);
+    ctx.fillText(`Total + margin: ${finalDv} m/s`, 20, 130);
+
+    ctx.fillText("Phase: -", 20, 230);
+    ctx.fillText("Ideal: -", 20, 255);
+    ctx.fillText("Error: -", 20, 280);
+    ctx.fillText("Window: not applicable", 20, 315);
+  } else if (selectedPlanet) {
     const dvEstimate = getCurrentDvEstimate(selectedPlanet);
 
     ctx.fillText(`Target: ${selectedPlanet.name}`, 20, 55);
@@ -683,6 +727,7 @@ function draw() {
       ctx.fillText(`Phase: ${dvEstimate.currentPhase.toFixed(1)}°`, 20, 230);
       ctx.fillText(`Ideal: ${dvEstimate.idealPhase.toFixed(1)}°`, 20, 255);
       ctx.fillText(`Error: ${dvEstimate.errorDeg.toFixed(1)}°`, 20, 280);
+
       const windowEstimate = findNextTransferWindow(selectedPlanet);
 
       if (windowEstimate) {
@@ -693,13 +738,12 @@ function draw() {
         ctx.fillText(`Window error: ${windowEstimate.errorDeg.toFixed(1)}°`, 20, 365);
         ctx.fillText(`Window Δv + margin: ${windowDvWithMargin} m/s`, 20, 390);
       }
-
     } else {
       const baseDv = getBaseDvToPlanet(selectedPlanet);
       const finalDv = applyMargin(baseDv, marginPercent);
 
       ctx.fillText(`Ideal Δv: ${baseDv ?? "-"} m/s`, 20, 80);
-      ctx.fillText(`Now Δv: není k dispozici`, 20, 105);
+      ctx.fillText("Now Δv: není k dispozici", 20, 105);
       ctx.fillText(`Total + margin: ${finalDv ?? "-"} m/s`, 20, 130);
     }
   } else {

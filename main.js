@@ -3,6 +3,7 @@ const ctx = canvas.getContext("2d");
 
 let selectedPlanet = null;
 let selectedTargetType = "planet";
+let selectedOrigin = "Kerbin";
 let marginPercent = 40;
 let time = 0;
 let draggedPlanet = null;
@@ -356,6 +357,25 @@ canvas.addEventListener("mousemove", (event) => {
   lastDragAngle = newAngle;
 });
 
+canvas.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+
+  const mouse = getMousePosition(event);
+
+  if (isPointOnKerbol(mouse.x, mouse.y)) {
+    selectedOrigin = "Kerbol";
+    console.log("Origin = Kerbol");
+    return;
+  }
+
+  const planet = findPlanetAtPosition(mouse.x, mouse.y);
+
+  if (planet) {
+    selectedOrigin = planet.name;
+    console.log("Origin =", planet.name);
+  }
+});
+
 window.addEventListener("mouseup", () => {
   isDraggingPlanet = false;
   draggedPlanet = null;
@@ -483,6 +503,10 @@ function getCurrentDvEstimate(planet) {
   // 180° chyba = cca +160%
   const penaltyMultiplier = 1 + (errorDeg / 90) * 0.8;
 
+  if (selectedOrigin !== "Kerbin") {
+    return null;
+  }
+
   return {
     baseDv,
     currentPhase,
@@ -523,6 +547,10 @@ function findNextTransferWindow(planet) {
 
   const windowTime = time + timeToWindow;
   const baseDv = getBaseDvToPlanet(planet);
+
+  if (selectedOrigin !== "Kerbin") {
+    return null;
+  }
 
   return {
     time: windowTime,
@@ -632,7 +660,16 @@ function draw() {
   const centerY = canvas.height / 2;
 
   // ☀️ Slunce
+  const isKerbolOrigin = selectedOrigin === "Kerbol";
   const isKerbolSelected = selectedTargetType === "kerbol";
+
+  if (isKerbolOrigin) {
+    ctx.strokeStyle = "cyan";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 16, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   if (isKerbolSelected) {
     ctx.shadowColor = "yellow";
@@ -665,11 +702,21 @@ function draw() {
     const isSelected = selectedPlanet === planet;
     const hasManualAngle = planet.manualAngle !== null;
     const radius = isSelected ? 8 : hasManualAngle ? 7 : 5;
+    const isOrigin = selectedOrigin === planet.name;
 
     // glow efekt
     if (isSelected) {
     ctx.shadowColor = "white";
     ctx.shadowBlur = 10;
+    }
+
+    if (isOrigin) {
+      ctx.strokeStyle = "cyan";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius + 4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 1;
     }
 
     ctx.fillStyle = planet.color;
@@ -691,7 +738,7 @@ function draw() {
   ctx.font = "16px Arial";
   ctx.textAlign = "left";
 
-  ctx.fillText("Origin: Kerbin", 20, 30);
+  ctx.fillText(`Origin: ${selectedOrigin}`, 20, 30);
 
   ctx.fillText(`Time: ${formatKspTime(time)}`, 20, 155);
   

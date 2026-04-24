@@ -31,7 +31,8 @@ const planets = [
     realSemiMajorAxis: 5263138304,
     orbitalPeriod: 2215754,
     color: "gray",
-    baseAngle: 0.5
+    baseAngle: 0.5,
+    manualAngle: null
   },
   {
     name: "Eve",
@@ -39,7 +40,8 @@ const planets = [
     realSemiMajorAxis: 9832684544,
     orbitalPeriod: 5657995,
     color: "purple",
-    baseAngle: 2.5
+    baseAngle: 2.5,
+    manualAngle: null
   },
   {
     name: "Kerbin",
@@ -47,7 +49,8 @@ const planets = [
     realSemiMajorAxis: 13599840256,
     orbitalPeriod: 9203545,
     color: "blue",
-    baseAngle: 0
+    baseAngle: 0,
+    manualAngle: null
   },
   {
     name: "Duna",
@@ -55,7 +58,8 @@ const planets = [
     realSemiMajorAxis: 20726155264,
     orbitalPeriod: 17315400,
     color: "orange",
-    baseAngle: -0.75
+    baseAngle: -0.75,
+    manualAngle: null
   },
   {
     name: "Dres",
@@ -63,7 +67,8 @@ const planets = [
     realSemiMajorAxis: 40839348203,
     orbitalPeriod: 47893063,
     color: "sandybrown",
-    baseAngle: 1.8
+    baseAngle: 1.8,
+    manualAngle: null
   },
   {
     name: "Jool",
@@ -71,7 +76,8 @@ const planets = [
     realSemiMajorAxis: 68773560320,
     orbitalPeriod: 104661432,
     color: "green",
-    baseAngle: 1.2
+    baseAngle: 1.2,
+    manualAngle: null
   },
   {
     name: "Eeloo",
@@ -79,7 +85,8 @@ const planets = [
     realSemiMajorAxis: 90118820000,
     orbitalPeriod: 156992048,
     color: "white",
-    baseAngle: 2.8
+    baseAngle: 2.8,
+    manualAngle: null
   }
 ];
 
@@ -148,6 +155,8 @@ function updateTimeUiFromTime() {
 }
 
 function updateTimeFromInputs() {
+  clearManualAngles();
+
   time = kspDateToSeconds(
     yearInput.value,
     dayInput.value,
@@ -159,6 +168,8 @@ function updateTimeFromInputs() {
 }
 
 function changeTimeByMinutes(minutes) {
+  clearManualAngles();
+
   time = Math.max(0, time + minutes * KSP_SECONDS_PER_MINUTE);
   updateTimeUiFromTime();
 }
@@ -267,6 +278,12 @@ function normalizeAngle(angle) {
   return ((angle % twoPi) + twoPi) % twoPi;
 }
 
+function clearManualAngles() {
+  planets.forEach(planet => {
+    planet.manualAngle = null;
+  });
+}
+
 function formatKspTime(totalSeconds) {
   const parts = secondsToKspParts(totalSeconds);
   return `Year ${parts.year}, Day ${parts.day}, ${parts.hour}h ${parts.minute}m`;
@@ -275,6 +292,10 @@ function formatKspTime(totalSeconds) {
 function getPlanetAngle(planet, time) {
   const kerbin = planets.find(p => p.name === "Kerbin");
 
+    if (planet.manualAngle !== null && planet.manualAngle !== undefined) {
+      return planet.manualAngle;
+    }
+    
   if (!planet.orbitalPeriod || !kerbin?.orbitalPeriod) {
     return planet.baseAngle ?? 0;
   }
@@ -355,6 +376,9 @@ function draw() {
 
   ctx.fillText(`Time: ${formatKspTime(time)}`, 20, 155);
   
+  const manualCount = planets.filter(planet => planet.manualAngle !== null).length;
+  ctx.fillText(`Manual overrides: ${manualCount}`, 20, 180);
+
   if (selectedPlanet) {
     const baseDv = getBaseDvToPlanet(selectedPlanet);
     const finalDv = applyMargin(baseDv, marginPercent);

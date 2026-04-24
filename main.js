@@ -546,29 +546,32 @@ function normalizeDegrees(degrees) {
 }
 
 function getCurrentPhaseAngle(targetPlanet) {
-  const kerbin = planets.find(p => p.name === "Kerbin");
+  if (!targetPlanet || selectedOrigin === "Kerbol") {
+    return null;
+  }
 
-  if (!targetPlanet || !kerbin || targetPlanet.name === "Kerbin") {
+  const originPlanet = getPlanetByName(selectedOrigin);
+
+  if (!originPlanet || originPlanet.name === targetPlanet.name) {
     return null;
   }
 
   const targetAngle = getPlanetAngle(targetPlanet, time);
-  const kerbinAngle = getPlanetAngle(kerbin, time);
+  const originAngle = getPlanetAngle(originPlanet, time);
 
-  const phaseRad = angleDifference(targetAngle, kerbinAngle);
+  const phaseRad = angleDifference(targetAngle, originAngle);
   return radToDeg(phaseRad);
 }
 
 function getCurrentDvEstimate(planet) {
   const baseDv = getBaseDvToPlanet(planet);
-  const angleData = transferAngleMap[planet?.name];
+  const idealPhase = getIdealTransferAngle(selectedOrigin, planet?.name);
 
-  if (baseDv === null || !angleData) {
+  if (baseDv === null || idealPhase === null) {
     return null;
   }
 
   const currentPhase = getCurrentPhaseAngle(planet);
-  const idealPhase = angleData.transferAngle;
 
   if (currentPhase === null) {
     return null;
@@ -587,10 +590,6 @@ function getCurrentDvEstimate(planet) {
   // 180° chyba = cca +160%
   const penaltyMultiplier = 1 + (errorDeg / 90) * 0.8;
 
-  if (selectedOrigin !== "Kerbin") {
-    return null;
-  }
-
   return {
     baseDv,
     currentPhase,
@@ -601,28 +600,34 @@ function getCurrentDvEstimate(planet) {
 }
 
 function findNextTransferWindow(planet) {
-  const angleData = transferAngleMap[planet?.name];
-
-  if (!planet || !angleData || planet.name === "Kerbin") {
+  if (!planet || planet.name === selectedOrigin || selectedOrigin === "Kerbol") {
     return null;
   }
 
-  const currentPhaseRad = degToRad(getCurrentPhaseAngle(planet));
-  const idealPhaseRad = degToRad(angleData.transferAngle);
+  const idealPhase = getIdealTransferAngle(selectedOrigin, planet.name);
 
-  const relativeSpeed = getRelativeAngularSpeedToKerbin(planet);
+  if (idealPhase === null) {
+    return null;
+  }
+
+  const currentPhase = getCurrentPhaseAngle(planet);
+
+  if (currentPhase === null) {
+    return null;
+  }
+
+  const currentPhaseRad = degToRad(currentPhase);
+  const idealPhaseRad = degToRad(idealPhase);
+
+  const relativeSpeed = getRelativeAngularSpeedBetween(selectedOrigin, planet.name);
 
   if (relativeSpeed === 0) {
     return null;
   }
 
-  // rozdíl mezi aktuálním a ideálním úhlem
   let deltaAngle = angleDifference(idealPhaseRad, currentPhaseRad);
-
-  // čas do dosažení ideálního úhlu
   let timeToWindow = deltaAngle / relativeSpeed;
 
-  // pokud vyjde minulost, posuň o synodickou periodu dopředu
   const synodicPeriod = (Math.PI * 2) / Math.abs(relativeSpeed);
 
   while (timeToWindow < 0) {
@@ -631,10 +636,6 @@ function findNextTransferWindow(planet) {
 
   const windowTime = time + timeToWindow;
   const baseDv = getBaseDvToPlanet(planet);
-
-  if (selectedOrigin !== "Kerbin") {
-    return null;
-  }
 
   return {
     time: windowTime,
@@ -721,6 +722,24 @@ function getRelativeAngularSpeedToKerbin(planet) {
   return planetAngularSpeed - kerbinAngularSpeed;
 }
 
+function getRelativeAngularSpeedBetween(originName, targetName) {
+  const origin = getPlanetByName(originName);
+  const target = getPlanetByName(targetName);
+
+  if (!origin || !target || origin.name === target.name) {
+    return 0;
+  }
+
+  if (!origin.orbitalPeriod || !target.orbitalPeriod) {
+    return 0;
+  }
+
+  const originAngularSpeed = (Math.PI * 2) / origin.orbitalPeriod;
+  const targetAngularSpeed = (Math.PI * 2) / target.orbitalPeriod;
+
+  return targetAngularSpeed - originAngularSpeed;
+}
+
 function getTimeFromDragDelta(planet, newAngle) {
   const relativeSpeed = getRelativeAngularSpeedToKerbin(planet);
 
@@ -736,6 +755,50 @@ function getTimeFromDragDelta(planet, newAngle) {
 
 function hasManualOverrides() {
   return planets.some(planet => planet.manualAngle !== null);
+}
+
+function getPlanetByName(name) {
+  return planets.find(planet => planet.name === name) ?? null;
+}
+
+function getIdealTransferAngle(originName, targetName) {
+  if (originName === "Kerbol" || targetName === "Kerbol") {
+    return null;
+  }
+
+  // Pokud máme ručně zadaný Kerbin -> target úhel z mapy, použijeme ho
+  if (originName === "Kerbin" && transferAngleMap[targetName]) {
+    return transferAngleMap[targetName].transferAngle;
+  }
+
+  const origin = getPlanetByName(originName);
+  const target = getPlanetByName(targetName);
+
+  if (!origin || !target || origin.name === target.name) {
+    return null;
+  }
+
+  const r1 = origin.realSemiMajorAxis;
+  const r2 = target.realSemiMajorAxis;
+
+  if (!r1 || !r2 || !origin.orbitalPeriod || !target.orbitalPeriod) {
+    return null;
+  }
+
+  // Hohmann approximation
+  const transferSemiMajorAxis = (r1 + r2) / 2;
+
+  // Keplerovo měřítko přes origin orbitu
+  const transferOrbitPeriod =
+    origin.orbitalPeriod * Math.pow(transferSemiMajorAxis / r1, 1.5);
+
+  const transferTime = transferOrbitPeriod / 2;
+
+  const targetAngularSpeed = (Math.PI * 2) / target.orbitalPeriod;
+
+  const idealAngleRad = Math.PI - targetAngularSpeed * transferTime;
+
+  return radToDeg(angleDifference(idealAngleRad, 0));
 }
 
 // render loop

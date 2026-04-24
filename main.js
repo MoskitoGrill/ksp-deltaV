@@ -113,6 +113,7 @@ const minuteInput = document.getElementById("minuteInput");
 const timeBackButton = document.getElementById("timeBackButton");
 const timeForwardButton = document.getElementById("timeForwardButton");
 const timeLabel = document.getElementById("timeLabel");
+const resetDayOneButton = document.getElementById("resetDayOneButton");
 
 let timeHoldInterval = null;
 let timeHoldTimeout = null;
@@ -230,6 +231,12 @@ window.addEventListener("touchcancel", stopTimeHold);
 
 updateTimeUiFromTime();
 
+resetDayOneButton.addEventListener("click", () => {
+  clearManualAngles();
+  time = 0;
+  updateTimeUiFromTime();
+});
+
 const moveWholeSystemInput = document.getElementById("moveWholeSystemInput");
 
 moveWholeSystemInput.addEventListener("change", () => {
@@ -269,23 +276,17 @@ canvas.addEventListener("mousemove", (event) => {
   const newAngle = getAngleFromPoint(mouse.x, mouse.y, centerX, centerY);
 
   if (moveWholeSystem) {
-    const relativeSpeed = getRelativeAngularSpeedToKerbin(draggedPlanet);
+    let deltaAngle = newAngle - lastDragAngle;
 
-    if (relativeSpeed !== 0) {
-      // rozdíl mezi posledním a novým úhlem
-      let deltaAngle = newAngle - lastDragAngle;
+    if (deltaAngle > Math.PI) deltaAngle -= Math.PI * 2;
+    if (deltaAngle < -Math.PI) deltaAngle += Math.PI * 2;
 
-      // unwrap (abychom nepřeskočili ±π)
-      if (deltaAngle > Math.PI) deltaAngle -= Math.PI * 2;
-      if (deltaAngle < -Math.PI) deltaAngle += Math.PI * 2;
+    planets.forEach(planet => {
+      if (planet.name === "Kerbin") return;
 
-      const deltaTime = deltaAngle / relativeSpeed;
-
-      time = Math.max(0, time + deltaTime);
-      updateTimeUiFromTime();
-    }
-
-    clearManualAngles();
+      const currentAngle = getPlanetAngle(planet, time);
+      planet.manualAngle = normalizeAngle(currentAngle + deltaAngle);
+    });
   } else {
     draggedPlanet.manualAngle = newAngle;
   }
@@ -468,15 +469,6 @@ function draw() {
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
     ctx.fill();
-
-    if (hasManualAngle) {
-      ctx.strokeStyle = "white";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, radius + 3, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
 
     // reset shadow
     ctx.shadowBlur = 0;

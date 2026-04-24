@@ -437,8 +437,7 @@ canvas.addEventListener("contextmenu", (event) => {
   const mouse = getMousePosition(event);
 
   if (isPointOnKerbol(mouse.x, mouse.y)) {
-    setOrigin("Kerbol");
-    console.log("Origin = Kerbol");
+    console.log("Kerbol cannot be set as origin.");
     return;
   }
 
@@ -899,13 +898,20 @@ function draw() {
   ctx.fillText(`Move whole system: ${moveWholeSystem ? "ON" : "OFF"}`, 20, 205);
 
   if (selectedTargetType === "kerbol") {
-    const baseDv = getBaseDvToTarget("Kerbol");
+    const baseDv = selectedOrigin === "Kerbin" ? getBaseDvToTarget("Kerbol") : null;
     const finalDv = applyMargin(baseDv, marginPercent);
 
     ctx.fillText("Target: Kerbol", 20, 55);
-    ctx.fillText(`Ideal Δv: ${baseDv} m/s`, 20, 80);
-    ctx.fillText("Now Δv: same as ideal", 20, 105);
-    ctx.fillText(`Total + margin: ${finalDv} m/s`, 20, 130);
+
+    if (baseDv !== null) {
+      ctx.fillText(`Ideal Δv: ${baseDv} m/s`, 20, 80);
+      ctx.fillText("Now Δv: same as ideal", 20, 105);
+      ctx.fillText(`Total + margin: ${finalDv} m/s`, 20, 130);
+    } else {
+      ctx.fillText("Ideal Δv: no data", 20, 80);
+      ctx.fillText("Now Δv: no data", 20, 105);
+      ctx.fillText("Total + margin: -", 20, 130);
+    }
 
     ctx.fillText("Phase: -", 20, 230);
     ctx.fillText("Ideal: -", 20, 255);

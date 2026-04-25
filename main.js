@@ -1206,6 +1206,45 @@ function drawOriginGlow(pos, radius) {
   ctx.restore();
 }
 
+function drawGhostTransferPosition(centerX, centerY) {
+  if (selectedTargetType !== "planet" || !selectedPlanet) return;
+  if (selectedPlanet.name === selectedOrigin) return;
+
+  const windowEstimate = findNextTransferWindow(selectedPlanet);
+  if (!windowEstimate) return;
+
+  const ghostAngle = getTimeBasedPlanetAngle(selectedPlanet, windowEstimate.time);
+
+  const ghostX = centerX + selectedPlanet.orbitRadius * Math.cos(ghostAngle);
+  const ghostY = centerY + selectedPlanet.orbitRadius * Math.sin(ghostAngle);
+
+  ctx.save();
+
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = selectedPlanet.color;
+  ctx.shadowColor = selectedPlanet.color;
+  ctx.shadowBlur = 12;
+
+  ctx.beginPath();
+  ctx.arc(ghostX, ghostY, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.arc(ghostX, ghostY, 11, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.65;
+  ctx.fillStyle = "white";
+  ctx.font = "11px Arial";
+  ctx.fillText("ideal", ghostX + 10, ghostY - 8);
+
+  ctx.restore();
+}
+
 // render loop
 function draw() {
   drawSpaceBackground();
@@ -1248,6 +1287,9 @@ function draw() {
 
   // 🚀 TRANSFER LINE
   drawTransferLine(centerX, centerY);
+
+  // 👻 IDEAL WINDOW GHOST POSITION
+  drawGhostTransferPosition(centerX, centerY);
 
   // 🔵 PLANETY
   planets.forEach(planet => {

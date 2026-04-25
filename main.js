@@ -867,6 +867,8 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
   if (deltaAngle > Math.PI) deltaAngle -= Math.PI * 2;
   if (deltaAngle < -Math.PI) deltaAngle += Math.PI * 2;
 
+  const distance = Math.hypot(end.x - start.x, end.y - start.y);
+  const maxBend = Math.min(45, distance * 0.25);
   const steps = 80;
 
   ctx.save();
@@ -888,7 +890,9 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
     const radius = startRadius + (endRadius - startRadius) * t;
 
     // malé gravitační prohnutí směrem ke Slunci
-    const gravityBend = Math.sin(t * Math.PI) * 45 * curveStrength;
+    const distance = Math.hypot(end.x - start.x, end.y - start.y);
+    const maxBend = Math.min(45, distance * 0.25);
+    const gravityBend = Math.sin(t * Math.PI) * maxBend * curveStrength;
     const finalRadius = radius - gravityBend;
 
     const x = centerX + Math.cos(angle) * finalRadius;
@@ -912,7 +916,9 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
 
     const angle = startAngle + deltaAngle * t;
     const radius = startRadius + (endRadius - startRadius) * t;
-    const gravityBend = Math.sin(t * Math.PI) * 45 * curveStrength;
+    const distance = Math.hypot(end.x - start.x, end.y - start.y);
+    const maxBend = Math.min(45, distance * 0.25);
+    const gravityBend = Math.sin(t * Math.PI) * maxBend * curveStrength;
     const finalRadius = radius - gravityBend;
 
     const x = centerX + Math.cos(angle) * finalRadius;

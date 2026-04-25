@@ -100,19 +100,73 @@ canvas {
 
 #debugToggleButton {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  left: 18px;
+  bottom: 18px;
   z-index: 20;
-  background: rgba(0, 0, 0, 0.6);
-  color: rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 12px;
+
+  width: 44px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
   cursor: pointer;
+  opacity: 0.55;
+}
+
+#debugToggleButton::before {
+  content: "";
+  position: absolute;
+  right: 6px;
+  top: 13px;
+
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+
+  background: rgba(210, 245, 255, 0.95);
+  box-shadow:
+    0 0 6px rgba(150, 230, 255, 0.75),
+    0 0 14px rgba(120, 220, 255, 0.35);
+}
+
+#debugToggleButton::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 13px;
+
+  width: 42px;
+  height: 12px;
+
+  background: radial-gradient(
+    ellipse at right center,
+    rgba(150, 230, 255, 0.65) 0%,
+    rgba(150, 230, 255, 0.35) 25%,
+    rgba(150, 230, 255, 0.15) 55%,
+    rgba(150, 230, 255, 0.05) 75%,
+    rgba(150, 230, 255, 0) 100%
+  );
+
+  border-radius: 999px;
+
+  transform: rotate(28deg);
+  transform-origin: right center;
+
+  filter: blur(2px);
+
+  /* ✨ kouzlo – rozpad ocasu */
+  box-shadow:
+    -6px 2px 8px rgba(150, 230, 255, 0.25),
+    -14px 4px 12px rgba(150, 230, 255, 0.15),
+    -22px 6px 16px rgba(150, 230, 255, 0.08);
 }
 
 #debugToggleButton:hover {
-  color: white;
-  background: rgba(0, 0, 0, 0.8);
+  opacity: 1;
+}
+
+#debugToggleButton:hover::before {
+  box-shadow:
+    0 0 8px rgba(150, 230, 255, 0.9),
+    0 0 18px rgba(120, 220, 255, 0.45);
 }

@@ -918,8 +918,28 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction
     const bendDirection = isOuterTransfer ? 1 : -1;
     const finalRadius = radius + gravityBend * bendDirection;
 
-    const x = centerX + Math.cos(angle) * finalRadius;
-    const y = centerY + Math.sin(angle) * finalRadius;
+    let x = centerX + Math.cos(angle) * finalRadius;
+    let y = centerY + Math.sin(angle) * finalRadius;
+
+    // 👇 PLANETARY INFLUENCE
+    planets.forEach(planet => {
+      const pos = getPlanetPosition(planet, centerX, centerY);
+
+      const dx = x - pos.x;
+      const dy = y - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      const influenceRadius = 40; // ladit
+      if (dist < influenceRadius) {
+        const strength = (1 - dist / influenceRadius);
+
+        // směr od planety (odpuzování = gravitační ohyb)
+        const push = 6 * strength * strength; // ladit
+
+        x += (dx / dist) * push;
+        y += (dy / dist) * push;
+      }
+    });
 
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
@@ -946,8 +966,28 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction
     const bendDirection = isOuterTransfer ? 1 : -1;
     const finalRadius = radius + gravityBend * bendDirection;
 
-    const x = centerX + Math.cos(angle) * finalRadius;
-    const y = centerY + Math.sin(angle) * finalRadius;
+    let x = centerX + Math.cos(angle) * finalRadius;
+    let y = centerY + Math.sin(angle) * finalRadius;
+
+    // 👇 PLANETARY INFLUENCE
+    planets.forEach(planet => {
+      const pos = getPlanetPosition(planet, centerX, centerY);
+
+      const dx = x - pos.x;
+      const dy = y - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      const influenceRadius = 40; // ladit
+      if (dist < influenceRadius) {
+        const strength = (1 - dist / influenceRadius);
+
+        // směr od planety (odpuzování = gravitační ohyb)
+        const push = 6 * strength * strength; // ladit
+
+        x += (dx / dist) * push;
+        y += (dy / dist) * push;
+      }
+    });
 
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);

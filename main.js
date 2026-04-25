@@ -829,6 +829,21 @@ function getOriginPosition(centerX, centerY) {
   return getPlanetPosition(originPlanet, centerX, centerY);
 }
 
+function getTransferDirection(originName, targetName) {
+  const origin = getPlanetByName(originName);
+  const target = getPlanetByName(targetName);
+
+  if (!origin || !target) return 1;
+
+  // ven ze Slunce = prograde delší přirozený oblouk
+  if (target.realSemiMajorAxis > origin.realSemiMajorAxis) {
+    return 1;
+  }
+
+  // dovnitř ke Slunci = opačný oblouk
+  return -1;
+}
+
 function drawTransferLine(centerX, centerY) {
   const originPos = getOriginPosition(centerX, centerY);
   const targetPos = getTargetPosition(centerX, centerY);
@@ -846,14 +861,15 @@ function drawTransferLine(centerX, centerY) {
 
   // Kerbol target zatím kreslíme jen přímější linkou ke středu
   if (selectedTargetType === "kerbol") {
-    drawGlowingCurve(originPos, targetPos, centerX, centerY, 0.25);
+    drawGlowingCurve(originPos, targetPos, centerX, centerY, 0.25, 1);
     return;
   }
 
-  drawGlowingCurve(originPos, targetPos, centerX, centerY, 0.55);
+  const direction = getTransferDirection(selectedOrigin, selectedPlanet.name);
+  drawGlowingCurve(originPos, targetPos, centerX, centerY, 0.55, direction);
 }
 
-function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
+function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction = 1) {
   const startAngle = Math.atan2(start.y - centerY, start.x - centerX);
   const endAngle = Math.atan2(end.y - centerY, end.x - centerX);
 
@@ -862,10 +878,15 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
 
   const arcRadius = (startRadius + endRadius) / 2;
 
-  let deltaAngle = endAngle - startAngle;
+  let deltaAngle;
 
-  if (deltaAngle > Math.PI) deltaAngle -= Math.PI * 2;
-  if (deltaAngle < -Math.PI) deltaAngle += Math.PI * 2;
+  if (direction >= 0) {
+    // prograde směr: vždy dopředu proti směru hodinových ručiček
+    deltaAngle = normalizeAngle(endAngle - startAngle);
+  } else {
+    // retrograde/vnitřní transfer: opačný oblouk
+    deltaAngle = -normalizeAngle(startAngle - endAngle);
+  }
 
   const distance = Math.hypot(end.x - start.x, end.y - start.y);
   const maxBend = Math.min(45, distance * 0.25);
@@ -893,7 +914,9 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
     const distance = Math.hypot(end.x - start.x, end.y - start.y);
     const maxBend = Math.min(45, distance * 0.25);
     const gravityBend = Math.sin(t * Math.PI) * maxBend * curveStrength;
-    const finalRadius = radius - gravityBend;
+    const isOuterTransfer = endRadius > startRadius;
+    const bendDirection = isOuterTransfer ? 1 : -1;
+    const finalRadius = radius + gravityBend * bendDirection;
 
     const x = centerX + Math.cos(angle) * finalRadius;
     const y = centerY + Math.sin(angle) * finalRadius;
@@ -919,7 +942,9 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
     const distance = Math.hypot(end.x - start.x, end.y - start.y);
     const maxBend = Math.min(45, distance * 0.25);
     const gravityBend = Math.sin(t * Math.PI) * maxBend * curveStrength;
-    const finalRadius = radius - gravityBend;
+    const isOuterTransfer = endRadius > startRadius;
+    const bendDirection = isOuterTransfer ? 1 : -1;
+    const finalRadius = radius + gravityBend * bendDirection;
 
     const x = centerX + Math.cos(angle) * finalRadius;
     const y = centerY + Math.sin(angle) * finalRadius;
@@ -1077,7 +1102,7 @@ function draw() {
           ? "now"
           : formatDuration(windowEstimate.timeFromNow);
 
-        ctx.fillText(`Window in: ${windowText}`, 20, 315);ctx.fillText(`Window in: ${formatDuration(windowEstimate.timeFromNow)}`, 20, 315);
+        ctx.fillText(`Window in: ${windowText}`, 20, 315);
         ctx.fillText(`Window time: ${formatKspTime(windowEstimate.time)}`, 20, 340);
         ctx.fillText(`Window error: ${windowEstimate.errorDeg.toFixed(1)}°`, 20, 365);
         ctx.fillText(`Window Δv + margin: ${windowDvWithMargin} m/s`, 20, 390);

@@ -1039,8 +1039,12 @@ function drawTransferLine(centerX, centerY) {
     return;
   }
 
-  // Kerbol target zatím kreslíme jen přímější linkou ke středu
+  // 🔥 Kerbol transfer povolíme jen z Kerbinu
   if (selectedTargetType === "kerbol") {
+    if (selectedOrigin !== "Kerbin") {
+      return; // ❌ z jiných planet NEkreslíme
+    }
+
     drawGlowingCurve(originPos, targetPos, centerX, centerY, 0.25, 1);
     return;
   }
@@ -1423,7 +1427,12 @@ if (selectedTargetType === "kerbol") {
     ctx.fillText("Now: no data", 20, 55);
   }
 
-  ctx.fillText("Window: not applicable", 20, 80);
+  if (selectedOrigin === "Kerbin") {
+    ctx.fillText("Window: anytime", 20, 80);
+  } else {
+    ctx.fillText("Window: not applicable", 20, 80);
+  }
+  
 } else if (selectedPlanet) {
   const dvEstimate = getCurrentDvEstimate(selectedPlanet);
   const windowEstimate = findNextTransferWindow(selectedPlanet);

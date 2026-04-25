@@ -4,7 +4,7 @@ const ctx = canvas.getContext("2d");
 let selectedPlanet = null;
 let selectedTargetType = "planet";
 let selectedOrigin = "Kerbin";
-let marginPercent = 40;
+let marginPercent = 0;
 let time = 0;
 let draggedPlanet = null;
 let isDraggingPlanet = false;
@@ -14,6 +14,7 @@ let dragStartAngle = 0;
 let lastDragAngle = 0;
 let accumulatedDragDeltaAngle = 0;
 let dragStartPlanetAngles = new Map();
+let showDebugPanel = false;
 
 const KSP_SECONDS_PER_MINUTE = 60;
 const KSP_MINUTES_PER_HOUR = 60;
@@ -207,6 +208,11 @@ const timeForwardButton = document.getElementById("timeForwardButton");
 const timeLabel = document.getElementById("timeLabel");
 const resetDayOneButton = document.getElementById("resetDayOneButton");
 const originSelect = document.getElementById("originSelect");
+const debugToggleButton = document.getElementById("debugToggleButton");
+
+debugToggleButton.addEventListener("click", () => {
+  showDebugPanel = !showDebugPanel;
+});
 
 originSelect.addEventListener("change", () => {
   selectedOrigin = originSelect.value;
@@ -542,6 +548,14 @@ function radToDeg(radians) {
 
 function normalizeDegrees(degrees) {
   return ((degrees % 360) + 360) % 360;
+}
+
+function drawMarginTag(text, x, y) {
+  ctx.fillStyle = "#7CFF7C";
+  ctx.font = "13px Arial";
+  ctx.fillText(text, x, y);
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
 }
 
 function getCurrentPhaseAngle(targetPlanet) {
@@ -997,6 +1011,79 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction
   ctx.restore();
 }
 
+function drawDebugPanel() {
+  const x = 12;
+  const y = canvas.height - 315;
+  const width = 330;
+  const height = 290;
+
+  ctx.save();
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.78)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, 8);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "white";
+  ctx.font = "13px Arial";
+  ctx.textAlign = "left";
+
+  const targetName = selectedTargetType === "kerbol"
+    ? "Kerbol"
+    : selectedPlanet?.name ?? "-";
+
+  const manualCount = planets.filter(planet => planet.manualAngle !== null).length;
+
+  let lineY = y + 22;
+  const lineGap = 18;
+
+  function line(text) {
+    ctx.fillText(text, x + 12, lineY);
+    lineY += lineGap;
+  }
+
+  line(`Origin: ${selectedOrigin}`);
+  line(`Target: ${targetName}`);
+  line(`Time: ${formatKspTime(time)}`);
+  line(`Margin: ${marginPercent}%`);
+  line(`Manual overrides: ${manualCount}`);
+  line(`Move whole system: ${moveWholeSystem ? "ON" : "OFF"}`);
+
+  if (selectedTargetType === "planet" && selectedPlanet) {
+    const dvEstimate = getCurrentDvEstimate(selectedPlanet);
+    const windowEstimate = findNextTransferWindow(selectedPlanet);
+
+    if (dvEstimate) {
+      line(`Ideal raw Δv: ${dvEstimate.baseDv} m/s`);
+      line(`Now raw Δv: ${dvEstimate.estimatedDv} m/s`);
+      line(`Phase: ${dvEstimate.currentPhase.toFixed(1)}°`);
+      line(`Ideal angle: ${dvEstimate.idealPhase.toFixed(1)}°`);
+      line(`Error: ${dvEstimate.errorDeg.toFixed(1)}°`);
+    } else {
+      line("DV estimate: no data");
+    }
+
+    if (windowEstimate) {
+      const windowDvWithMargin = applyMargin(windowEstimate.dv, marginPercent);
+      line(`Window error: ${windowEstimate.errorDeg.toFixed(1)}°`);
+      line(`Window Δv + margin: ${windowDvWithMargin} m/s`);
+    } else {
+      line("Window: no data");
+    }
+  }
+
+  if (selectedTargetType === "kerbol") {
+    const baseDv = selectedOrigin === "Kerbin" ? getBaseDvToTarget("Kerbol") : null;
+    line(`Kerbol raw Δv: ${baseDv ?? "no data"}`);
+  }
+
+  ctx.restore();
+}
+
 // render loop
 function draw() {
   // vyčistit plochu
@@ -1089,77 +1176,67 @@ function draw() {
   ctx.font = "16px Arial";
   ctx.textAlign = "left";
 
-  ctx.fillText(`Origin: ${selectedOrigin}`, 20, 30);
+  // hlavní info panel
+ctx.fillStyle = "white";
+ctx.font = "16px Arial";
+ctx.textAlign = "left";
 
-  ctx.fillText(`Time: ${formatKspTime(time)}`, 20, 155);
-  
-  const manualCount = planets.filter(planet => planet.manualAngle !== null).length;
-  ctx.fillText(`Manual overrides: ${manualCount}`, 20, 180);
-  ctx.fillText(`Move whole system: ${moveWholeSystem ? "ON" : "OFF"}`, 20, 205);
+if (selectedTargetType === "kerbol") {
+  const baseDv = selectedOrigin === "Kerbin" ? getBaseDvToTarget("Kerbol") : null;
+  const idealWithMargin = applyMargin(baseDv, marginPercent);
 
-  if (selectedTargetType === "kerbol") {
-    const baseDv = selectedOrigin === "Kerbin" ? getBaseDvToTarget("Kerbol") : null;
-    const finalDv = applyMargin(baseDv, marginPercent);
+  if (baseDv !== null) {
+    ctx.fillText(`Ideal: ${idealWithMargin} m/s`, 20, 30);
+    drawMarginTag(`+${marginPercent}%`, 165, 30);
 
-    ctx.fillText("Target: Kerbol", 20, 55);
+    ctx.fillText(`Now: ${idealWithMargin} m/s`, 20, 55);
+    drawMarginTag(`+${marginPercent}%`, 165, 55);
+  } else {
+    ctx.fillText("Ideal: no data", 20, 30);
+    ctx.fillText("Now: no data", 20, 55);
+  }
 
-    if (baseDv !== null) {
-      ctx.fillText(`Ideal Δv: ${baseDv} m/s`, 20, 80);
-      ctx.fillText("Now Δv: same as ideal", 20, 105);
-      ctx.fillText(`Total + margin: ${finalDv} m/s`, 20, 130);
-    } else {
-      ctx.fillText("Ideal Δv: no data", 20, 80);
-      ctx.fillText("Now Δv: no data", 20, 105);
-      ctx.fillText("Total + margin: -", 20, 130);
-    }
+  ctx.fillText("Window: not applicable", 20, 80);
+} else if (selectedPlanet) {
+  const dvEstimate = getCurrentDvEstimate(selectedPlanet);
+  const windowEstimate = findNextTransferWindow(selectedPlanet);
 
-    ctx.fillText("Phase: -", 20, 230);
-    ctx.fillText("Ideal: -", 20, 255);
-    ctx.fillText("Error: -", 20, 280);
-    ctx.fillText("Window: not applicable", 20, 315);
-  } else if (selectedPlanet) {
-    const dvEstimate = getCurrentDvEstimate(selectedPlanet);
+  if (dvEstimate) {
+    const idealWithMargin = applyMargin(dvEstimate.baseDv, marginPercent);
+    const nowWithMargin = applyMargin(dvEstimate.estimatedDv, marginPercent);
 
-    ctx.fillText(`Target: ${selectedPlanet.name}`, 20, 55);
+    ctx.fillText(`Ideal: ${idealWithMargin} m/s`, 20, 30);
+    drawMarginTag(`+${marginPercent}%`, 165, 30);
 
-    if (dvEstimate) {
-      const finalDv = applyMargin(dvEstimate.estimatedDv, marginPercent);
+    ctx.fillText(`Now: ${nowWithMargin} m/s`, 20, 55);
+    drawMarginTag(`+${marginPercent}%`, 165, 55);
 
-      ctx.fillText(`Ideal Δv: ${dvEstimate.baseDv} m/s`, 20, 80);
-      ctx.fillText(`Now Δv: ${dvEstimate.estimatedDv} m/s`, 20, 105);
-      ctx.fillText(`Total + margin: ${finalDv} m/s`, 20, 130);
+    if (windowEstimate) {
+      const windowText = windowEstimate.timeFromNow === 0
+        ? "now"
+        : formatDuration(windowEstimate.timeFromNow);
 
-      ctx.fillText(`Phase: ${dvEstimate.currentPhase.toFixed(1)}°`, 20, 230);
-      ctx.fillText(`Ideal: ${dvEstimate.idealPhase.toFixed(1)}°`, 20, 255);
-      ctx.fillText(`Error: ${dvEstimate.errorDeg.toFixed(1)}°`, 20, 280);
-
-      const windowEstimate = findNextTransferWindow(selectedPlanet);
-
-      if (windowEstimate) {
-        const windowDvWithMargin = applyMargin(windowEstimate.dv, marginPercent);
-
-        const windowText = windowEstimate.timeFromNow === 0
-          ? "now"
-          : formatDuration(windowEstimate.timeFromNow);
-
-        ctx.fillText(`Window in: ${windowText}`, 20, 315);
-        ctx.fillText(`Window time: ${formatKspTime(windowEstimate.time)}`, 20, 340);
-        ctx.fillText(`Window error: ${windowEstimate.errorDeg.toFixed(1)}°`, 20, 365);
-        ctx.fillText(`Window Δv + margin: ${windowDvWithMargin} m/s`, 20, 390);
-      }
-    } else {
-      const baseDv = getBaseDvToPlanet(selectedPlanet);
-      const finalDv = applyMargin(baseDv, marginPercent);
-
-      ctx.fillText(`Ideal Δv: ${baseDv ?? "-"} m/s`, 20, 80);
-      ctx.fillText("Now Δv: není k dispozici", 20, 105);
-      ctx.fillText(`Total + margin: ${finalDv ?? "-"} m/s`, 20, 130);
+      ctx.fillText(`Window in: ${windowText}`, 20, 80);
+      ctx.fillText(`Window time: ${formatKspTime(windowEstimate.time)}`, 20, 105);
     }
   } else {
-    ctx.fillText("Target: žádný", 20, 55);
-    ctx.fillText("Ideal Δv: -", 20, 80);
-    ctx.fillText("Now Δv: -", 20, 105);
-    ctx.fillText("Total + margin: -", 20, 130);
+    const baseDv = getBaseDvToPlanet(selectedPlanet);
+    const idealWithMargin = applyMargin(baseDv, marginPercent);
+
+    ctx.fillText(`Ideal: ${idealWithMargin ?? "-"} m/s`, 20, 30);
+    if (baseDv !== null) drawMarginTag(`+${marginPercent}%`, 165, 30);
+
+    ctx.fillText("Now: no data", 20, 55);
+    ctx.fillText("Window: no data", 20, 80);
+  }
+} else {
+  ctx.fillText("Ideal: -", 20, 30);
+  ctx.fillText("Now: -", 20, 55);
+  ctx.fillText("Window: -", 20, 80);
+}
+
+  if (showDebugPanel) {
+    drawDebugPanel();
   }
 
   requestAnimationFrame(draw);

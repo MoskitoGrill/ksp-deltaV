@@ -1,64 +1,66 @@
 <!DOCTYPE html>
 <html lang="cs">
-<head>
-    <meta charset="UTF-8" />
-    <title>KSP Mission Planner</title>
-    <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-    <div id="uiPanel">
-        <div class="originControl">
-            <label for="originSelect">Origin</label>
-            <select id="originSelect">
-                <option value="Kerbin">Kerbin</option>
-                <option value="Moho">Moho</option>
-                <option value="Eve">Eve</option>
-                <option value="Duna">Duna</option>
-                <option value="Dres">Dres</option>
-                <option value="Jool">Jool</option>
-                <option value="Eeloo">Eeloo</option>
-            </select>
-        </div>
-        <div>
-            <label for="marginInput">Margin (%):</label>
-            <input id="marginInput" type="number" min="0" max="300" value="0" step="5" />
-        </div>
-
-        <div style="margin-top: 10px;">
-            <div>Time</div>
-
-            <div class="timeInputs">
-                <label>Year</label>
-                <input id="yearInput" type="number" min="1" value="1" />
-
-                <label>Day</label>
-                <input id="dayInput" type="number" min="1" max="426" value="1" />
-
-                <label>Hour</label>
-                <input id="hourInput" type="number" min="0" max="5" value="0" />
-                <label>Minute</label>
-                <input id="minuteInput" type="number" min="0" max="59" value="0" />
-            </div>
-
-            <div class="timeButtons">
-                <button id="timeBackButton">−</button>
-                <button id="timeForwardButton">+</button>
-                <button id="resetDayOneButton">Day 1</button>
+    <head>
+        <meta charset="UTF-8" />
+        <title>KSP Mission Planner</title>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <div id="uiPanel">
+            <div class="originControl">
+                <label for="originSelect">Origin</label>
+                <select id="originSelect">
+                    <option value="Kerbin">Kerbin</option>
+                    <option value="Moho">Moho</option>
+                    <option value="Eve">Eve</option>
+                    <option value="Duna">Duna</option>
+                    <option value="Dres">Dres</option>
+                    <option value="Jool">Jool</option>
+                    <option value="Eeloo">Eeloo</option>
+                </select>
             </div>
             <div>
-                <span id="timeLabel">Year 1, Day 1, 0h 0m</span>
+                <label for="marginInput">Margin (%):</label>
+                <input id="marginInput" type="number" min="0" max="300" value="0" step="5" />
             </div>
-            <div class="systemShiftControl">
-                <label>
-                    <input id="moveWholeSystemInput" type="checkbox" />
-                    Move whole system
-                </label>
-            </div>
+
+            <div style="margin-top: 10px;">
+                <div>Time</div>
+
+                <div class="timeInputs">
+                    <label>Year</label>
+                    <input id="yearInput" type="number" min="1" value="1" />
+
+                    <label>Day</label>
+                    <input id="dayInput" type="number" min="1" max="426" value="1" />
+
+                    <label>Hour</label>
+                    <input id="hourInput" type="number" min="0" max="5" value="0" />
+                    <label>Minute</label>
+                    <input id="minuteInput" type="number" min="0" max="59" value="0" />
+                </div>
+
+                <div class="timeButtons">
+                    <button id="timeBackButton">−</button>
+                    <button id="timeForwardButton">+</button>
+                    <button id="resetDayOneButton">Day 1</button>
+                </div>
+                <div>
+                    <span id="timeLabel">Year 1, Day 1, 0h 0m</span>
+                </div>
+                <div class="systemShiftControl">
+                    <label>
+                        <input id="moveWholeSystemInput" type="checkbox" />
+                        Move whole system
+                    </label>
+                </div>
             </div>
         </div>
+        
+        <button id="debugToggleButton">Debug</button>
 
-    <canvas id="spaceCanvas"></canvas>
+        <canvas id="spaceCanvas"></canvas>
 
-    <script src="main.js"></script>
-</body>
+        <script src="main.js"></script>
+    </body>
 </html>

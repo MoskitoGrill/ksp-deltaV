@@ -807,6 +807,92 @@ function getIdealTransferAngle(originName, targetName) {
   return radToDeg(angleDifference(idealAngleRad, 0));
 }
 
+function getTargetPosition(centerX, centerY) {
+  if (selectedTargetType === "kerbol") {
+    return { x: centerX, y: centerY };
+  }
+
+  if (!selectedPlanet) return null;
+
+  return getPlanetPosition(selectedPlanet, centerX, centerY);
+}
+
+function getOriginPosition(centerX, centerY) {
+  if (selectedOrigin === "Kerbol") {
+    return { x: centerX, y: centerY };
+  }
+
+  const originPlanet = getPlanetByName(selectedOrigin);
+
+  if (!originPlanet) return null;
+
+  return getPlanetPosition(originPlanet, centerX, centerY);
+}
+
+function drawTransferLine(centerX, centerY) {
+  const originPos = getOriginPosition(centerX, centerY);
+  const targetPos = getTargetPosition(centerX, centerY);
+
+  if (!originPos || !targetPos) return;
+
+  // pokud je origin stejný jako target, nekreslíme
+  if (
+    selectedTargetType === "planet" &&
+    selectedPlanet &&
+    selectedPlanet.name === selectedOrigin
+  ) {
+    return;
+  }
+
+  // Kerbol target zatím kreslíme jen přímější linkou ke středu
+  if (selectedTargetType === "kerbol") {
+    drawGlowingCurve(originPos, targetPos, centerX, centerY, 0.25);
+    return;
+  }
+
+  drawGlowingCurve(originPos, targetPos, centerX, centerY, 0.55);
+}
+
+function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
+  const midX = (start.x + end.x) / 2;
+  const midY = (start.y + end.y) / 2;
+
+  // vektor ze Slunce do středu spojnice
+  const fromSunX = midX - centerX;
+  const fromSunY = midY - centerY;
+
+  const length = Math.sqrt(fromSunX * fromSunX + fromSunY * fromSunY) || 1;
+
+  // kontrolní bod posuneme okolo Slunce ven, aby vznikl oblouk
+  const controlX = midX + (fromSunX / length) * 120 * curveStrength;
+  const controlY = midY + (fromSunY / length) * 120 * curveStrength;
+
+  ctx.save();
+
+  // glow vrstva
+  ctx.strokeStyle = "rgba(120, 220, 255, 0.25)";
+  ctx.lineWidth = 6;
+  ctx.shadowColor = "rgba(120, 220, 255, 0.8)";
+  ctx.shadowBlur = 8;
+
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.quadraticCurveTo(controlX, controlY, end.x, end.y);
+  ctx.stroke();
+
+  // ostrá linka
+  ctx.strokeStyle = "rgba(180, 240, 255, 0.58)";
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.quadraticCurveTo(controlX, controlY, end.x, end.y);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
 // render loop
 function draw() {
   // vyčistit plochu
@@ -848,6 +934,9 @@ function draw() {
     ctx.arc(centerX, centerY, planet.orbitRadius, 0, Math.PI * 2);
     ctx.stroke();
   });
+
+  // 🚀 TRANSFER LINE
+  drawTransferLine(centerX, centerY);
 
   // 🔵 PLANETY
   planets.forEach(planet => {

@@ -191,13 +191,17 @@ const planets = [
 
 const marginInput = document.getElementById("marginInput");
 
-marginInput.addEventListener("input", () => {
-  const value = Number(marginInput.value);
+if (marginInput) {
+  marginInput.value = marginPercent;
 
-  if (Number.isFinite(value) && value >= 0) {
-    marginPercent = value;
-  }
-});
+  marginInput.addEventListener("input", () => {
+    const value = Number(marginInput.value);
+
+    if (Number.isFinite(value) && value >= 0) {
+      marginPercent = value;
+    }
+  });
+}
 
 const yearInput = document.getElementById("yearInput");
 const dayInput = document.getElementById("dayInput");
@@ -208,6 +212,7 @@ const timeForwardButton = document.getElementById("timeForwardButton");
 const timeLabel = document.getElementById("timeLabel");
 const resetDayOneButton = document.getElementById("resetDayOneButton");
 const originSelect = document.getElementById("originSelect");
+const targetSelect = document.getElementById("targetSelect");
 const debugToggleButton = document.getElementById("debugToggleButton");
 
 debugToggleButton.addEventListener("click", () => {
@@ -216,6 +221,29 @@ debugToggleButton.addEventListener("click", () => {
 
 originSelect.addEventListener("change", () => {
   selectedOrigin = originSelect.value;
+});
+
+targetSelect.addEventListener("change", () => {
+  const value = targetSelect.value;
+
+  if (!value) {
+    selectedPlanet = null;
+    selectedTargetType = "planet";
+    return;
+  }
+
+  if (value === "Kerbol") {
+    selectedPlanet = null;
+    selectedTargetType = "kerbol";
+    return;
+  }
+
+  const planet = getPlanetByName(value);
+
+  if (planet) {
+    selectedPlanet = planet;
+    selectedTargetType = "planet";
+  }
 });
 
 let timeHoldInterval = null;
@@ -261,7 +289,9 @@ function updateTimeUiFromTime() {
   hourInput.value = parts.hour;
   minuteInput.value = parts.minute;
 
-  timeLabel.textContent = formatKspTime(time);
+  if (timeLabel) {
+    timeLabel.textContent = formatKspTime(time);
+  }
 }
 
 function updateTimeFromInputs() {
@@ -360,6 +390,7 @@ canvas.addEventListener("mousedown", (event) => {
   if (isPointOnKerbol(mouse.x, mouse.y)) {
     selectedPlanet = null;
     selectedTargetType = "kerbol";
+    targetSelect.value = "Kerbol";
     console.log("Vybraný target: Kerbol");
     return;
   }
@@ -370,6 +401,7 @@ canvas.addEventListener("mousedown", (event) => {
 
   selectedTargetType = "planet";
   selectedPlanet = planet;
+  targetSelect.value = planet.name;
 
   // Kerbin jde vybrat jako cíl, ale zatím ho netaháme
   if (planet.name === "Kerbin") {
@@ -550,12 +582,22 @@ function normalizeDegrees(degrees) {
   return ((degrees % 360) + 360) % 360;
 }
 
-function drawMarginTag(text, x, y) {
-  ctx.fillStyle = "#7CFF7C";
-  ctx.font = "13px Arial";
-  ctx.fillText(text, x, y);
+function drawTextWithMargin(text, x, y, marginPercent) {
   ctx.fillStyle = "white";
   ctx.font = "16px Arial";
+  ctx.fillText(text, x, y);
+
+  if (marginPercent > 0) {
+    const textWidth = ctx.measureText(text).width;
+    const gap = 6;
+
+    ctx.fillStyle = "#7CFF7C";
+    ctx.font = "13px Arial";
+    ctx.fillText(`+${marginPercent}%`, x + textWidth + gap, y);
+
+    ctx.fillStyle = "white";
+    ctx.font = "16px Arial";
+  }
 }
 
 function getCurrentPhaseAngle(targetPlanet) {
@@ -1171,11 +1213,6 @@ function draw() {
     ctx.fillText(planet.name, pos.x + 8, pos.y + 4);
   });
 
-    // informační panel
-  ctx.fillStyle = "white";
-  ctx.font = "16px Arial";
-  ctx.textAlign = "left";
-
   // hlavní info panel
 ctx.fillStyle = "white";
 ctx.font = "16px Arial";
@@ -1186,11 +1223,10 @@ if (selectedTargetType === "kerbol") {
   const idealWithMargin = applyMargin(baseDv, marginPercent);
 
   if (baseDv !== null) {
-    ctx.fillText(`Ideal: ${idealWithMargin} m/s`, 20, 30);
-    drawMarginTag(`+${marginPercent}%`, 165, 30);
+    drawTextWithMargin(`Ideal: ${idealWithMargin} m/s`, 20, 30, marginPercent);
 
-    ctx.fillText(`Now: ${idealWithMargin} m/s`, 20, 55);
-    drawMarginTag(`+${marginPercent}%`, 165, 55);
+    drawTextWithMargin(`Now: ${idealWithMargin} m/s`, 20, 55, marginPercent);
+
   } else {
     ctx.fillText("Ideal: no data", 20, 30);
     ctx.fillText("Now: no data", 20, 55);
@@ -1205,11 +1241,9 @@ if (selectedTargetType === "kerbol") {
     const idealWithMargin = applyMargin(dvEstimate.baseDv, marginPercent);
     const nowWithMargin = applyMargin(dvEstimate.estimatedDv, marginPercent);
 
-    ctx.fillText(`Ideal: ${idealWithMargin} m/s`, 20, 30);
-    drawMarginTag(`+${marginPercent}%`, 165, 30);
+    drawTextWithMargin(`Ideal: ${idealWithMargin} m/s`, 20, 30, marginPercent);
 
-    ctx.fillText(`Now: ${nowWithMargin} m/s`, 20, 55);
-    drawMarginTag(`+${marginPercent}%`, 165, 55);
+    drawTextWithMargin(`Now: ${nowWithMargin} m/s`, 20, 55, marginPercent);
 
     if (windowEstimate) {
       const windowText = windowEstimate.timeFromNow === 0
@@ -1223,8 +1257,8 @@ if (selectedTargetType === "kerbol") {
     const baseDv = getBaseDvToPlanet(selectedPlanet);
     const idealWithMargin = applyMargin(baseDv, marginPercent);
 
-    ctx.fillText(`Ideal: ${idealWithMargin ?? "-"} m/s`, 20, 30);
-    if (baseDv !== null) drawMarginTag(`+${marginPercent}%`, 165, 30);
+    drawTextWithMargin(`Ideal: ${idealWithMargin ?? "-"} m/s`, 20, 30, marginPercent);
+
 
     ctx.fillText("Now: no data", 20, 55);
     ctx.fillText("Window: no data", 20, 80);

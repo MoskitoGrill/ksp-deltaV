@@ -854,42 +854,75 @@ function drawTransferLine(centerX, centerY) {
 }
 
 function drawGlowingCurve(start, end, centerX, centerY, curveStrength) {
-  const midX = (start.x + end.x) / 2;
-  const midY = (start.y + end.y) / 2;
+  const startAngle = Math.atan2(start.y - centerY, start.x - centerX);
+  const endAngle = Math.atan2(end.y - centerY, end.x - centerX);
 
-  // vektor ze Slunce do středu spojnice
-  const fromSunX = midX - centerX;
-  const fromSunY = midY - centerY;
+  const startRadius = Math.hypot(start.x - centerX, start.y - centerY);
+  const endRadius = Math.hypot(end.x - centerX, end.y - centerY);
 
-  const length = Math.sqrt(fromSunX * fromSunX + fromSunY * fromSunY) || 1;
+  const arcRadius = (startRadius + endRadius) / 2;
 
-  // kontrolní bod posuneme okolo Slunce ven, aby vznikl oblouk
-  const controlX = midX + (fromSunX / length) * 120 * curveStrength;
-  const controlY = midY + (fromSunY / length) * 120 * curveStrength;
+  let deltaAngle = endAngle - startAngle;
+
+  if (deltaAngle > Math.PI) deltaAngle -= Math.PI * 2;
+  if (deltaAngle < -Math.PI) deltaAngle += Math.PI * 2;
+
+  const steps = 80;
 
   ctx.save();
 
   // glow vrstva
-  ctx.strokeStyle = "rgba(120, 220, 255, 0.25)";
+  ctx.strokeStyle = "rgba(120, 220, 255, 0.12)";
   ctx.lineWidth = 6;
-  ctx.shadowColor = "rgba(120, 220, 255, 0.8)";
+  ctx.shadowColor = "rgba(120, 220, 255, 0.3)";
   ctx.shadowBlur = 8;
 
   ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.quadraticCurveTo(controlX, controlY, end.x, end.y);
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+
+    const angle = startAngle + deltaAngle * t;
+
+    // radius se plynule mění od origin orbity k target orbitě
+    const radius = startRadius + (endRadius - startRadius) * t;
+
+    // malé gravitační prohnutí směrem ke Slunci
+    const gravityBend = Math.sin(t * Math.PI) * 45 * curveStrength;
+    const finalRadius = radius - gravityBend;
+
+    const x = centerX + Math.cos(angle) * finalRadius;
+    const y = centerY + Math.sin(angle) * finalRadius;
+
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+
   ctx.stroke();
 
   // ostrá linka
   ctx.strokeStyle = "rgba(180, 240, 255, 0.58)";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.2;
   ctx.shadowBlur = 0;
 
   ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.quadraticCurveTo(controlX, controlY, end.x, end.y);
-  ctx.stroke();
 
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+
+    const angle = startAngle + deltaAngle * t;
+    const radius = startRadius + (endRadius - startRadius) * t;
+    const gravityBend = Math.sin(t * Math.PI) * 45 * curveStrength;
+    const finalRadius = radius - gravityBend;
+
+    const x = centerX + Math.cos(angle) * finalRadius;
+    const y = centerY + Math.sin(angle) * finalRadius;
+
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+
+  ctx.stroke();
   ctx.restore();
 }
 

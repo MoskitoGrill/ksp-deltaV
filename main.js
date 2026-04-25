@@ -1184,6 +1184,28 @@ function drawDebugPanel() {
   ctx.restore();
 }
 
+function drawOriginGlow(pos, radius) {
+  ctx.save();
+
+  const gradient = ctx.createRadialGradient(
+    pos.x, pos.y, radius * 0.6,
+    pos.x, pos.y, radius + 6
+  );
+
+  // 🔥 zesílené hodnoty
+  gradient.addColorStop(0, "rgba(80, 220, 255, 0.45)");
+  gradient.addColorStop(0.5, "rgba(80, 220, 255, 0.25)");
+  gradient.addColorStop(1, "rgba(80, 220, 255, 0)");
+
+  ctx.fillStyle = gradient;
+
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, radius + 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
 // render loop
 function draw() {
   drawSpaceBackground();
@@ -1247,12 +1269,7 @@ function draw() {
     }
 
     if (isOrigin) {
-      ctx.strokeStyle = "cyan";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, radius + 4, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.lineWidth = 1;
+      drawOriginGlow(pos, radius);
     }
 
     ctx.fillStyle = planet.color;

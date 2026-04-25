@@ -373,10 +373,19 @@ resetDayOneButton.addEventListener("click", () => {
 });
 
 const moveWholeSystemInput = document.getElementById("moveWholeSystemInput");
+const moveWholeSystemButton = document.getElementById("moveWholeSystemButton");
 
-moveWholeSystemInput.addEventListener("change", () => {
-  moveWholeSystem = moveWholeSystemInput.checked;
+function updateMoveWholeSystemButton() {
+  moveWholeSystemButton.classList.toggle("active", moveWholeSystem);
+}
+
+moveWholeSystemButton.addEventListener("click", () => {
+  moveWholeSystem = !moveWholeSystem;
+  moveWholeSystemInput.checked = moveWholeSystem;
+  updateMoveWholeSystemButton();
 });
+
+updateMoveWholeSystemButton();
 
 // resize canvas na celou obrazovku
 function resizeCanvas() {

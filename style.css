@@ -98,19 +98,89 @@ canvas {
   padding: 0 10px;
 }
 
-#moveWholeSystemControl {
+#moveWholeSystemButton {
   position: absolute;
-  top: 150px;
-  right: 12px;
+  top: 116px;
+  right: 22px;
   z-index: 10;
 
-  background: rgba(0, 0, 0, 0.55);
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+.satelliteIcon {
+  display: block;
+  color: rgba(255,255,255,0.65);
+  font-size: 20px;
+  transform: rotate(25deg);
+  text-shadow: 0 0 4px rgba(255,255,255,0.15);
+}
+
+#moveWholeSystemButton.active {
+  opacity: 1;
+}
+
+#moveWholeSystemButton.active .satelliteIcon {
+  color: rgba(120, 220, 255, 0.95);
+  text-shadow:
+    0 0 6px rgba(120, 220, 255, 0.8),
+    0 0 14px rgba(120, 220, 255, 0.45);
+}
+
+#moveWholeSystemButton.active::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  top: 5px;
+  width: 18px;
+  height: 18px;
+  border-top: 1px solid rgba(120, 220, 255, 0.7);
+  border-right: 1px solid rgba(120, 220, 255, 0.45);
+  border-radius: 50%;
+  transform: rotate(25deg);
+}
+
+#moveWholeSystemButton {
+  position: absolute;
+  top: 116px;
+  right: 22px;
+  z-index: 10;
+
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.55;
+}
+
+/* tooltip */
+#moveWholeSystemButton .tooltip {
+  position: absolute;
+  right: 42px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  background: rgba(0,0,0,0.75);
   color: white;
-  padding: 7px 10px;
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 8px;
-  font-family: Arial, sans-serif;
-  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 6px;
+
+  font-size: 12px;
+  white-space: nowrap;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* zobrazí se při hoveru */
+#moveWholeSystemButton:hover .tooltip {
+  opacity: 1;
 }
 
 .originControl {

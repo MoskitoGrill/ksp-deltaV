@@ -17,8 +17,9 @@ let dragStartPlanetAngles = new Map();
 let showDebugPanel = false;
 let stars = [];
 let realtimeEnabled = false;
-let realtimeInterval = null;
+let realtimeLastFrame = null;
 let realtimeModeIndex = 0;
+let planetTrails = new Map();
 
 const STAR_COUNT = 260;
 const KSP_SECONDS_PER_MINUTE = 60;
@@ -31,10 +32,10 @@ const KSP_SECONDS_PER_DAY = KSP_SECONDS_PER_HOUR * KSP_HOURS_PER_DAY;
 const KSP_SECONDS_PER_YEAR = KSP_SECONDS_PER_DAY * KSP_DAYS_PER_YEAR;
 
 const realtimeModes = [
-  { label: "min", minutesPerTick: 1 },
-  { label: "hour", minutesPerTick: 60 },
-  { label: "day", minutesPerTick: KSP_HOURS_PER_DAY * 60 },
-  { label: "year", minutesPerTick: KSP_DAYS_PER_YEAR * KSP_HOURS_PER_DAY * 60 }
+  { label: "min", tooltip: "Min", minutesPerTick: 1 },
+  { label: "hour", tooltip: "Hour", minutesPerTick: 60 },
+  { label: "day", tooltip: "Day", minutesPerTick: KSP_HOURS_PER_DAY * 60 },
+  { label: "year", tooltip: "Year", minutesPerTick: KSP_DAYS_PER_YEAR * KSP_HOURS_PER_DAY * 60 }
 ];
 
 const dvMatrix = {
@@ -213,6 +214,36 @@ if (marginInput) {
       marginPercent = value;
     }
   });
+
+  marginInput.addEventListener("wheel", (event) => {
+    event.preventDefault();
+
+    const direction = event.deltaY < 0 ? 1 : -1;
+    const step = event.shiftKey ? 10 : 1;
+
+    const currentValue = Number(marginInput.value) || 0;
+    const nextValue = Math.max(0, currentValue + direction * step);
+
+    marginInput.value = nextValue;
+    marginPercent = nextValue;
+  });
+
+  marginInput.addEventListener("focus", () => {
+    if (Number(marginInput.value) === 0) {
+      marginInput.value = "";
+    }
+  });
+
+  marginInput.addEventListener("blur", () => {
+    if (marginInput.value === "" || Number(marginInput.value) < 0) {
+      marginInput.value = 0;
+      marginPercent = 0;
+    }
+  });
+
+  marginInput.addEventListener("click", () => {
+    marginInput.select();
+  });
 }
 
 const yearInput = document.getElementById("yearInput");
@@ -330,31 +361,45 @@ function changeTimeByMinutes(minutes) {
 function updateRealtimeButton() {
   const mode = realtimeModes[realtimeModeIndex];
 
-  realtimeButton.textContent = realtimeEnabled ? "⏸" : "🕒";
-  realtimeButton.title = `Realtime: ${mode.label}`;
+  const modeText = realtimeButton.querySelector(".realtimeModeText");
+  const icon = realtimeButton.querySelector(".realtimeIcon");
+  const tooltip = realtimeButton.querySelector(".tooltip");
+
+  if (modeText) modeText.textContent = mode.label;
+  if (icon) icon.textContent = realtimeEnabled ? "⏸" : "🕒";
+  if (tooltip) tooltip.textContent = mode.tooltip;
+
   realtimeButton.classList.toggle("active", realtimeEnabled);
 }
 
 function startRealtime() {
-  if (realtimeInterval) clearInterval(realtimeInterval);
-
   realtimeEnabled = true;
-
-  realtimeInterval = setInterval(() => {
-    const mode = realtimeModes[realtimeModeIndex];
-    advanceTimeByMinutes(mode.minutesPerTick);
-  }, 1000);
-
+  realtimeLastFrame = performance.now();
   updateRealtimeButton();
 }
 
 function stopRealtime() {
   realtimeEnabled = false;
-
-  clearInterval(realtimeInterval);
-  realtimeInterval = null;
-
+  realtimeLastFrame = null;
   updateRealtimeButton();
+}
+
+function updateRealtimeMotion() {
+  if (!realtimeEnabled) return;
+
+  const now = performance.now();
+
+  if (realtimeLastFrame === null) {
+    realtimeLastFrame = now;
+    return;
+  }
+
+  const deltaSeconds = (now - realtimeLastFrame) / 1000;
+  realtimeLastFrame = now;
+
+  const mode = realtimeModes[realtimeModeIndex];
+
+  advanceTimeByMinutes(mode.minutesPerTick * deltaSeconds);
 }
 
 function toggleRealtime() {
@@ -367,12 +412,7 @@ function toggleRealtime() {
 
 function cycleRealtimeMode() {
   realtimeModeIndex = (realtimeModeIndex + 1) % realtimeModes.length;
-
-  if (realtimeEnabled) {
-    startRealtime();
-  } else {
-    updateRealtimeButton();
-  }
+  updateRealtimeButton();
 }
 
 function advanceTimeByMinutes(minutes) {
@@ -579,10 +619,46 @@ canvas.addEventListener("mousedown", (event) => {
   console.log("Vybraná planeta:", planet.name);
 });
 
-canvas.addEventListener("mousemove", (event) => {
-  if (!isDraggingPlanet || !draggedPlanet) return;
+canvas.addEventListener("wheel", (event) => {
+  if (!marginHover) return;
 
+  event.preventDefault();
+
+  const direction = event.deltaY < 0 ? 1 : -1;
+  const step = event.shiftKey ? 10 : 1;
+
+  marginPercent = Math.max(0, marginPercent + direction * step);
+});
+
+canvas.addEventListener("mousedown", (event) => {
+  if (marginHover) {
+    const newValue = prompt("Margin %:", marginPercent);
+
+    if (newValue !== null) {
+      const parsedValue = Number(newValue);
+
+      if (Number.isFinite(parsedValue) && parsedValue >= 0) {
+        marginPercent = parsedValue;
+      }
+    }
+
+    return;
+  }
+
+  marginEdit = false;
+});
+
+canvas.addEventListener("mousemove", (event) => {
   const mouse = getMousePosition(event);
+
+  marginHover = (
+    mouse.x > 20 &&
+    mouse.x < 180 &&
+    mouse.y > 115 &&
+    mouse.y < 140
+  );
+
+  if (!isDraggingPlanet || !draggedPlanet) return;
 
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
@@ -1145,6 +1221,7 @@ function drawTransferLine(centerX, centerY) {
 }
 
 function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction = 1) {
+  const shimmer = 1 + Math.sin(performance.now() * 0.002) * 0.15;
   const startAngle = Math.atan2(start.y - centerY, start.x - centerX);
   const endAngle = Math.atan2(end.y - centerY, end.x - centerX);
 
@@ -1226,7 +1303,7 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction
 
   // ostrá linka
   ctx.strokeStyle = lineColor.sharp;
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 1.2 * shimmer;
   ctx.shadowBlur = 0;
 
   ctx.beginPath();
@@ -1350,9 +1427,12 @@ function drawDebugPanel() {
 function drawOriginGlow(pos, radius) {
   ctx.save();
 
+  const pulse = 1 + Math.sin(performance.now() * 0.003) * 0.18;
+  const glowRadius = radius + 6 * pulse;
+
   const gradient = ctx.createRadialGradient(
     pos.x, pos.y, radius * 0.6,
-    pos.x, pos.y, radius + 6
+    pos.x, pos.y, glowRadius
   );
 
   // 🔥 zesílené hodnoty
@@ -1363,7 +1443,7 @@ function drawOriginGlow(pos, radius) {
   ctx.fillStyle = gradient;
 
   ctx.beginPath();
-  ctx.arc(pos.x, pos.y, radius + 6, 0, Math.PI * 2);
+  ctx.arc(pos.x, pos.y, glowRadius, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -1395,7 +1475,9 @@ function drawGhostTransferPosition(centerX, centerY) {
   ctx.shadowBlur = 16;
 
   ctx.beginPath();
-  ctx.arc(ghostX, ghostY, 6, 0, Math.PI * 2);
+  const pulse = 1 + Math.sin(performance.now() * 0.003) * 0.25;
+
+  ctx.arc(ghostX, ghostY, 6 * pulse, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
@@ -1425,6 +1507,8 @@ function commitManualPlanetPosition(planet) {
 
 // render loop
 function draw() {
+  updateRealtimeMotion();
+
   drawSpaceBackground();
 
   // střed (Slunce)
@@ -1468,6 +1552,40 @@ function draw() {
 
   // 👻 IDEAL WINDOW GHOST POSITION
   drawGhostTransferPosition(centerX, centerY);
+
+  if (realtimeEnabled) {
+    planets.forEach(p => {
+      const pos = getPlanetPosition(p, centerX, centerY);
+
+      if (!planetTrails.has(p.name)) {
+        planetTrails.set(p.name, []);
+      }
+
+      const trail = planetTrails.get(p.name);
+
+      trail.push({ x: pos.x, y: pos.y });
+
+      if (trail.length > 40) trail.shift();
+
+      ctx.save();
+      ctx.beginPath();
+
+      for (let i = 0; i < trail.length; i++) {
+        const t = i / trail.length;
+        ctx.globalAlpha = t * 0.35;
+
+        if (i === 0) ctx.moveTo(trail[i].x, trail[i].y);
+        else ctx.lineTo(trail[i].x, trail[i].y);
+      }
+
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    });
+  } else {
+    planetTrails.clear();
+  }
 
   // 🔵 PLANETY
   planets.forEach(planet => {
@@ -1566,6 +1684,7 @@ if (selectedTargetType === "kerbol") {
       ctx.fillText(`Window in: ${windowText}`, 20, 80);
       ctx.fillText(`Window time: ${formatKspTime(windowEstimate.time)}`, 20, 105);
     }
+
   } else {
     const baseDv = getBaseDvToPlanet(selectedPlanet);
     const idealWithMargin = applyMargin(baseDv, marginPercent);

@@ -50,7 +50,10 @@
             </div>
 
             <div class="timeButtons">
-                <button id="realtimeButton" title="Realtime">🕒</button>
+                <button id="realtimeButton">
+                    <span class="realtimeIcon">🕒</span>
+                    <span class="tooltip">minutes</span>
+                </button>
                 <button id="resetDayOneButton">Day 1</button>
                 <button id="timeForwardButton">+</button>
                 <button id="timeBackButton">−</button>
@@ -67,6 +70,12 @@
         <button id="debugToggleButton" title="Debug panel" aria-label="Debug panel"></button>
 
         <canvas id="spaceCanvas"></canvas>
+
+        <div id="leftInfoMargin">
+            <span>Margin:</span>
+            <input id="marginInput" type="number" min="0" value="0">
+            <span>%</span>
+        </div>
 
         <script src="main.js"></script>
     </body>

@@ -16,6 +16,9 @@ let accumulatedDragDeltaAngle = 0;
 let dragStartPlanetAngles = new Map();
 let showDebugPanel = false;
 let stars = [];
+let realtimeEnabled = false;
+let realtimeInterval = null;
+let realtimeModeIndex = 0;
 
 const STAR_COUNT = 260;
 const KSP_SECONDS_PER_MINUTE = 60;
@@ -26,6 +29,13 @@ const KSP_DAYS_PER_YEAR = 426;
 const KSP_SECONDS_PER_HOUR = KSP_SECONDS_PER_MINUTE * KSP_MINUTES_PER_HOUR;
 const KSP_SECONDS_PER_DAY = KSP_SECONDS_PER_HOUR * KSP_HOURS_PER_DAY;
 const KSP_SECONDS_PER_YEAR = KSP_SECONDS_PER_DAY * KSP_DAYS_PER_YEAR;
+
+const realtimeModes = [
+  { label: "min", minutesPerTick: 1 },
+  { label: "hour", minutesPerTick: 60 },
+  { label: "day", minutesPerTick: KSP_HOURS_PER_DAY * 60 },
+  { label: "year", minutesPerTick: KSP_DAYS_PER_YEAR * KSP_HOURS_PER_DAY * 60 }
+];
 
 const dvMatrix = {
   Moho: {
@@ -216,6 +226,7 @@ const resetDayOneButton = document.getElementById("resetDayOneButton");
 const originSelect = document.getElementById("originSelect");
 const targetSelect = document.getElementById("targetSelect");
 const debugToggleButton = document.getElementById("debugToggleButton");
+const realtimeButton = document.getElementById("realtimeButton");
 
 debugToggleButton.addEventListener("click", () => {
   showDebugPanel = !showDebugPanel;
@@ -316,8 +327,75 @@ function changeTimeByMinutes(minutes) {
   updateTimeUiFromTime();
 }
 
-[yearInput, dayInput, hourInput, minuteInput].forEach(input => {
+function updateRealtimeButton() {
+  const mode = realtimeModes[realtimeModeIndex];
+
+  realtimeButton.textContent = realtimeEnabled ? "⏸" : "🕒";
+  realtimeButton.title = `Realtime: ${mode.label}`;
+  realtimeButton.classList.toggle("active", realtimeEnabled);
+}
+
+function startRealtime() {
+  if (realtimeInterval) clearInterval(realtimeInterval);
+
+  realtimeEnabled = true;
+
+  realtimeInterval = setInterval(() => {
+    const mode = realtimeModes[realtimeModeIndex];
+    advanceTimeByMinutes(mode.minutesPerTick);
+  }, 1000);
+
+  updateRealtimeButton();
+}
+
+function stopRealtime() {
+  realtimeEnabled = false;
+
+  clearInterval(realtimeInterval);
+  realtimeInterval = null;
+
+  updateRealtimeButton();
+}
+
+function toggleRealtime() {
+  if (realtimeEnabled) {
+    stopRealtime();
+  } else {
+    startRealtime();
+  }
+}
+
+function cycleRealtimeMode() {
+  realtimeModeIndex = (realtimeModeIndex + 1) % realtimeModes.length;
+
+  if (realtimeEnabled) {
+    startRealtime();
+  } else {
+    updateRealtimeButton();
+  }
+}
+
+function advanceTimeByMinutes(minutes) {
+  time = Math.max(0, time + minutes * KSP_SECONDS_PER_MINUTE);
+  updateTimeUiFromTime();
+}
+
+const timeInputs = [yearInput, dayInput, hourInput, minuteInput];
+
+timeInputs.forEach(input => {
   input.addEventListener("change", updateTimeFromInputs);
+
+  input.addEventListener("wheel", (event) => {
+    event.preventDefault();
+
+    const direction = event.deltaY < 0 ? 1 : -1;
+    const step = event.shiftKey ? 10 : 1;
+
+    const currentValue = Number(input.value) || 0;
+    input.value = currentValue + direction * step;
+
+    updateTimeFromInputs();
+  });
 });
 
 function startTimeHold(direction) {
@@ -371,6 +449,15 @@ resetDayOneButton.addEventListener("click", () => {
   time = 0;
   updateTimeUiFromTime();
 });
+
+realtimeButton.addEventListener("click", toggleRealtime);
+
+realtimeButton.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+  cycleRealtimeMode();
+});
+
+updateRealtimeButton();
 
 const moveWholeSystemInput = document.getElementById("moveWholeSystemInput");
 const moveWholeSystemButton = document.getElementById("moveWholeSystemButton");
@@ -555,6 +642,10 @@ canvas.addEventListener("contextmenu", (event) => {
 });
 
 window.addEventListener("mouseup", () => {
+  if (draggedPlanet && draggedPlanet.manualAngle !== null) {
+    commitManualPlanetPosition(draggedPlanet);
+  }
+
   isDraggingPlanet = false;
   draggedPlanet = null;
 });
@@ -1310,6 +1401,28 @@ function drawGhostTransferPosition(centerX, centerY) {
   ctx.restore();
 }
 
+function commitManualPlanetPosition(planet) {
+  if (!planet || planet.manualAngle === null) return;
+
+  const kerbin = getPlanetByName("Kerbin");
+
+  if (!kerbin?.orbitalPeriod || !planet.orbitalPeriod) {
+    planet.manualAngle = null;
+    return;
+  }
+
+  const planetProgress = (time / planet.orbitalPeriod) * Math.PI * 2;
+  const kerbinProgress = (time / kerbin.orbitalPeriod) * Math.PI * 2;
+
+  // Chceme, aby getTimeBasedPlanetAngle(planet, time)
+  // po uvolnění vyšlo přesně na aktuální ručně nastavený úhel.
+  planet.baseAngle = normalizeAngle(
+    planet.manualAngle - planetProgress + kerbinProgress
+  );
+
+  planet.manualAngle = null;
+}
+
 // render loop
 function draw() {
   drawSpaceBackground();
@@ -1432,7 +1545,7 @@ if (selectedTargetType === "kerbol") {
   } else {
     ctx.fillText("Window: not applicable", 20, 80);
   }
-  
+
 } else if (selectedPlanet) {
   const dvEstimate = getCurrentDvEstimate(selectedPlanet);
   const windowEstimate = findNextTransferWindow(selectedPlanet);

@@ -978,6 +978,43 @@ function getTransferDirection(originName, targetName) {
   return -1;
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getTransferLineColor() {
+  if (selectedTargetType !== "planet" || !selectedPlanet) {
+    return {
+      glow: "rgba(120, 220, 255, 0.12)",
+      sharp: "rgba(180, 240, 255, 0.58)",
+      shadow: "rgba(120, 220, 255, 0.3)"
+    };
+  }
+
+  const dvEstimate = getCurrentDvEstimate(selectedPlanet);
+
+  if (!dvEstimate) {
+    return {
+      glow: "rgba(180, 180, 180, 0.10)",
+      sharp: "rgba(220, 220, 220, 0.45)",
+      shadow: "rgba(180, 180, 180, 0.25)"
+    };
+  }
+
+  // 0° = modrá, 90°+ = červená
+  const t = clamp(dvEstimate.errorDeg / 90, 0, 1);
+
+  const r = Math.round(80 + t * 220);
+  const g = Math.round(220 - t * 120);
+  const b = Math.round(255 - t * 210);
+
+  return {
+    glow: `rgba(${r}, ${g}, ${b}, 0.13)`,
+    sharp: `rgba(${r}, ${g}, ${b}, 0.68)`,
+    shadow: `rgba(${r}, ${g}, ${b}, 0.35)`
+  };
+}
+
 function drawTransferLine(centerX, centerY) {
   const originPos = getOriginPosition(centerX, centerY);
   const targetPos = getTargetPosition(centerX, centerY);
@@ -1026,12 +1063,14 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction
   const maxBend = Math.min(45, distance * 0.25);
   const steps = 80;
 
+  const lineColor = getTransferLineColor();
+
   ctx.save();
 
   // glow vrstva
-  ctx.strokeStyle = "rgba(120, 220, 255, 0.12)";
+  ctx.strokeStyle = lineColor.glow;
   ctx.lineWidth = 6;
-  ctx.shadowColor = "rgba(120, 220, 255, 0.3)";
+  ctx.shadowColor = lineColor.shadow;
   ctx.shadowBlur = 8;
 
   ctx.beginPath();
@@ -1082,7 +1121,7 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction
   ctx.stroke();
 
   // ostrá linka
-  ctx.strokeStyle = "rgba(180, 240, 255, 0.58)";
+  ctx.strokeStyle = lineColor.sharp;
   ctx.lineWidth = 1.2;
   ctx.shadowBlur = 0;
 

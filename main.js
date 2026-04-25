@@ -15,7 +15,9 @@ let lastDragAngle = 0;
 let accumulatedDragDeltaAngle = 0;
 let dragStartPlanetAngles = new Map();
 let showDebugPanel = false;
+let stars = [];
 
+const STAR_COUNT = 260;
 const KSP_SECONDS_PER_MINUTE = 60;
 const KSP_MINUTES_PER_HOUR = 60;
 const KSP_HOURS_PER_DAY = 6;
@@ -380,6 +382,62 @@ moveWholeSystemInput.addEventListener("change", () => {
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  generateStars();
+}
+
+function generateStars() {
+  stars = [];
+
+  for (let i = 0; i < STAR_COUNT; i++) {
+    stars.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      radius: Math.random() * 1.4 + 0.2,
+      alpha: Math.random() * 0.65 + 0.15,
+      glow: Math.random() > 0.88
+    });
+  }
+}
+
+function drawSpaceBackground() {
+  // základní černé pozadí
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // jemná mléčná dráha / prach
+  const gradient = ctx.createLinearGradient(
+    canvas.width * 0.15,
+    canvas.height,
+    canvas.width * 0.85,
+    0
+  );
+
+  gradient.addColorStop(0, "rgba(80, 120, 180, 0)");
+  gradient.addColorStop(0.45, "rgba(80, 120, 180, 0.055)");
+  gradient.addColorStop(0.55, "rgba(180, 120, 220, 0.04)");
+  gradient.addColorStop(1, "rgba(80, 120, 180, 0)");
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // hvězdy
+  stars.forEach(star => {
+    ctx.save();
+
+    ctx.globalAlpha = star.alpha;
+    ctx.fillStyle = "white";
+
+    if (star.glow) {
+      ctx.shadowColor = "rgba(180, 220, 255, 0.65)";
+      ctx.shadowBlur = 6;
+    }
+
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  });
 }
 
 canvas.addEventListener("mousedown", (event) => {
@@ -1128,9 +1186,7 @@ function drawDebugPanel() {
 
 // render loop
 function draw() {
-  // vyčistit plochu
-  ctx.fillStyle = "black";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawSpaceBackground();
 
   // střed (Slunce)
   const centerX = canvas.width / 2;

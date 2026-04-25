@@ -717,51 +717,40 @@ function findNextTransferWindow(planet) {
     return null;
   }
 
+  const originPlanet = getPlanetByName(selectedOrigin);
+  if (!originPlanet) return null;
+
   const idealPhase = getIdealTransferAngle(selectedOrigin, planet.name);
+  if (idealPhase === null) return null;
 
-  if (idealPhase === null) {
-    return null;
-  }
-
-  const currentPhase = getCurrentPhaseAngle(planet);
-
-  if (currentPhase === null) {
-    return null;
-  }
-
-  const currentPhaseRad = degToRad(currentPhase);
+  const currentPhaseRad = getPredictedPhaseBetween(originPlanet, planet, 0);
   const idealPhaseRad = degToRad(idealPhase);
 
-  const relativeSpeed = getRelativeAngularSpeedBetween(selectedOrigin, planet.name);
+  const originSpeed = getPlanetAngularSpeed(originPlanet);
+  const targetSpeed = getPlanetAngularSpeed(planet);
+  const phaseSpeed = targetSpeed - originSpeed;
 
-  if (relativeSpeed === 0) {
-    return null;
-  }
+  if (phaseSpeed === 0) return null;
 
   let deltaAngle = angleDifference(idealPhaseRad, currentPhaseRad);
-  let timeToWindow = deltaAngle / relativeSpeed;
+  let timeToWindow = deltaAngle / phaseSpeed;
 
-  const synodicPeriod = (Math.PI * 2) / Math.abs(relativeSpeed);
-
-  // Pokud jsme extrémně blízko okna, bereme to jako "teď"
+  const synodicPeriod = (Math.PI * 2) / Math.abs(phaseSpeed);
   const windowTolerance = KSP_SECONDS_PER_HOUR * 6;
 
-  if (Math.abs(timeToWindow) <= windowTolerance) {
-    timeToWindow = 0;
-  } else {
-    while (timeToWindow < 0) {
-      timeToWindow += synodicPeriod;
-    }
+  while (timeToWindow < 0) {
+    timeToWindow += synodicPeriod;
   }
 
-  const windowTime = time + timeToWindow;
-  const baseDv = getBaseDvToPlanet(planet);
+  if (timeToWindow <= windowTolerance || synodicPeriod - timeToWindow <= windowTolerance) {
+    timeToWindow = 0;
+  }
 
   return {
-    time: windowTime,
+    time: time + timeToWindow,
     timeFromNow: timeToWindow,
     errorDeg: 0,
-    dv: baseDv
+    dv: getBaseDvToPlanet(planet)
   };
 }
 
@@ -805,6 +794,37 @@ function getPlanetAngle(planet, time) {
   }
 
   return getTimeBasedPlanetAngle(planet, time);
+}
+
+function getPlanetAngularSpeed(planet) {
+  if (!planet?.orbitalPeriod) return 0;
+  return (Math.PI * 2) / planet.orbitalPeriod;
+}
+
+function getPredictedPlanetAngleFromCurrent(planet, secondsFromNow) {
+  if (!planet) return null;
+
+  const kerbin = getPlanetByName("Kerbin");
+
+  const currentAngle = getPlanetAngle(planet, time);
+
+  const planetSpeed = getPlanetAngularSpeed(planet);
+  const kerbinSpeed = getPlanetAngularSpeed(kerbin);
+
+  return normalizeAngle(
+    currentAngle + (planetSpeed - kerbinSpeed) * secondsFromNow
+  );
+}
+
+function getPredictedPhaseBetween(originPlanet, targetPlanet, secondsFromNow) {
+  const originAngle = getPredictedPlanetAngleFromCurrent(originPlanet, secondsFromNow);
+  const targetAngle = getPredictedPlanetAngleFromCurrent(targetPlanet, secondsFromNow);
+
+  if (originAngle === null || targetAngle === null) {
+    return null;
+  }
+
+  return angleDifference(targetAngle, originAngle);
 }
 
 function getTimeBasedPlanetAngle(planet, timeValue) {
@@ -1210,37 +1230,30 @@ function drawGhostTransferPosition(centerX, centerY) {
   if (selectedTargetType !== "planet" || !selectedPlanet) return;
   if (selectedPlanet.name === selectedOrigin) return;
 
-  const windowEstimate = findNextTransferWindow(selectedPlanet);
-  if (!windowEstimate) return;
+  const originPlanet = getPlanetByName(selectedOrigin);
+  if (!originPlanet) return;
 
-  const ghostAngle = getTimeBasedPlanetAngle(selectedPlanet, windowEstimate.time);
+  const idealPhase = getIdealTransferAngle(selectedOrigin, selectedPlanet.name);
+  if (idealPhase === null) return;
+
+  const originAngle = getPlanetAngle(originPlanet, time);
+
+  // Ideální pozice targetu vůči aktuální pozici originu
+  const ghostAngle = normalizeAngle(originAngle + degToRad(idealPhase));
 
   const ghostX = centerX + selectedPlanet.orbitRadius * Math.cos(ghostAngle);
   const ghostY = centerY + selectedPlanet.orbitRadius * Math.sin(ghostAngle);
 
   ctx.save();
 
-  ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = 0.45;
   ctx.fillStyle = selectedPlanet.color;
   ctx.shadowColor = selectedPlanet.color;
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = 16;
 
   ctx.beginPath();
   ctx.arc(ghostX, ghostY, 6, 0, Math.PI * 2);
   ctx.fill();
-
-  ctx.globalAlpha = 0.22;
-  ctx.strokeStyle = "white";
-  ctx.lineWidth = 1;
-
-  ctx.beginPath();
-  ctx.arc(ghostX, ghostY, 11, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.globalAlpha = 0.65;
-  ctx.fillStyle = "white";
-  ctx.font = "11px Arial";
-  ctx.fillText("ideal", ghostX + 10, ghostY - 8);
 
   ctx.restore();
 }
@@ -1304,6 +1317,21 @@ function draw() {
     const radius = isSelected ? 8 : hasManualAngle ? 7 : 5;
     const isOrigin = selectedOrigin === planet.name;
 
+    if (hasManualAngle) {
+      ctx.save();
+
+      ctx.strokeStyle = "rgba(255, 170, 60, 0.27)";
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = "rgba(255, 140, 40, 0.51)";
+      ctx.shadowBlur = 10;
+
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, radius + 7, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+    
     // glow efekt
     if (isSelected) {
     ctx.shadowColor = "white";

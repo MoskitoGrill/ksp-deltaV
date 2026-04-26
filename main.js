@@ -21,6 +21,8 @@ let realtimeLastFrame = null;
 let realtimeModeIndex = 0;
 let planetTrails = new Map();
 let resetAnimation = null;
+let viewMode = "practical";
+let viewTransition = null;
 
 const STAR_COUNT = 260;
 const KSP_SECONDS_PER_MINUTE = 60;
@@ -142,6 +144,7 @@ const planets = [
     name: "Moho",
     orbitRadius: 60,
     realSemiMajorAxis: 5263138304,
+    eccentricity: 0.2,
     orbitalPeriod: 2215754,
     color: "gray",
     baseAngle: 1.4835,
@@ -152,6 +155,7 @@ const planets = [
     name: "Eve",
     orbitRadius: 100,
     realSemiMajorAxis: 9832684544,
+    eccentricity: 0.01,
     orbitalPeriod: 5657995,
     color: "purple",
     baseAngle: 0.2618,
@@ -162,6 +166,7 @@ const planets = [
     name: "Kerbin",
     orbitRadius: 140,
     realSemiMajorAxis: 13599840256,
+    eccentricity: 0,
     orbitalPeriod: 9203545,
     color: "blue",
     baseAngle: 0,
@@ -172,6 +177,7 @@ const planets = [
     name: "Duna",
     orbitRadius: 180,
     realSemiMajorAxis: 20726155264,
+    eccentricity: 0.051,
     orbitalPeriod: 17315400,
     color: "orange",
     baseAngle: 2.3649,
@@ -182,6 +188,7 @@ const planets = [
     name: "Dres",
     orbitRadius: 220,
     realSemiMajorAxis: 40839348203,
+    eccentricity: 0.145,
     orbitalPeriod: 47893063,
     color: "sandybrown",
     baseAngle: 0.1745,
@@ -192,6 +199,7 @@ const planets = [
     name: "Jool",
     orbitRadius: 260,
     realSemiMajorAxis: 68773560320,
+    eccentricity: 0.05,
     orbitalPeriod: 104661432,
     color: "green",
     baseAngle: -2.1347,
@@ -202,6 +210,7 @@ const planets = [
     name: "Eeloo",
     orbitRadius: 320,
     realSemiMajorAxis: 90118820000,
+    eccentricity: 0.26,
     orbitalPeriod: 156992048,
     color: "white",
     baseAngle: -0.8727,
@@ -279,6 +288,15 @@ if (realtimeSpeedSlider) {
   realtimeSpeedSlider.max = 1;
   realtimeSpeedSlider.step = 0.001;
   realtimeSpeedSlider.value = 0;
+}
+
+const viewModeSelect = document.getElementById("viewModeSelect");
+if (viewModeSelect) {
+  viewModeSelect.value = viewMode;
+
+  viewModeSelect.addEventListener("change", () => {
+    startViewTransition(viewModeSelect.value);
+  });
 }
 
 realtimeSpeedSlider.addEventListener("wheel", (event) => {
@@ -719,7 +737,13 @@ canvas.addEventListener("mousemove", (event) => {
   const centerX = canvas.width / 2;
   const centerY = canvas.height / 2;
 
-  const newAngle = getAngleFromPoint(mouse.x, mouse.y, centerX, centerY);
+  const newAngle = getOrbitAngleFromPoint(
+    mouse.x,
+    mouse.y,
+    draggedPlanet,
+    centerX,
+    centerY
+  );
 
   let deltaAngleStep = newAngle - lastDragAngle;
 
@@ -787,9 +811,99 @@ resizeCanvas();
 
 function getPlanetPosition(planet, centerX, centerY) {
   const angle = getPlanetAngle(planet, time);
-  const x = centerX + planet.orbitRadius * Math.cos(angle);
-  const y = centerY + planet.orbitRadius * Math.sin(angle);
-  return { x, y };
+
+  const practicalPos = getPracticalPlanetPositionByAngle(planet, angle, centerX, centerY);
+  const realisticPos = getRealisticPlanetPosition(planet, angle, centerX, centerY);
+
+  if (!viewTransition) {
+    return viewMode === "realistic" ? realisticPos : practicalPos;
+  }
+
+  const t = getViewTransitionT();
+
+  if (viewTransition?.to === "realistic") {
+    return {
+      x: lerp(practicalPos.x, realisticPos.x, t),
+      y: lerp(practicalPos.y, realisticPos.y, t)
+    };
+  }
+
+  return {
+    x: lerp(realisticPos.x, practicalPos.x, t),
+    y: lerp(realisticPos.y, practicalPos.y, t)
+  };
+}
+
+function getRealisticOrbitRadius(planet) {
+  const maxAxis = Math.max(...planets.map(p => p.realSemiMajorAxis));
+
+  // větší číslo = víc místa pro Eeloo
+  const maxScreenRadius = Math.min(canvas.width, canvas.height) * 0.47;
+
+  // menší číslo = víc roztáhne vnitřní planety
+  // zkus 0.70 až 0.82
+  const compression = 0.72;
+
+  return maxScreenRadius * Math.pow(planet.realSemiMajorAxis / maxAxis, compression);
+}
+
+function getRealisticPlanetPosition(planet, angle, centerX, centerY) {
+  const a = getRealisticOrbitRadius(planet);
+  const e = planet.eccentricity ?? 0;
+  const b = a * Math.sqrt(1 - e * e);
+  const focusOffset = a * e;
+
+  const ellipseCenterX = centerX - focusOffset;
+
+  return {
+    x: ellipseCenterX + a * Math.cos(angle),
+    y: centerY + b * Math.sin(angle)
+  };
+}
+
+function getPracticalPlanetPositionByAngle(planet, angle, centerX, centerY) {
+  return {
+    x: centerX + planet.orbitRadius * Math.cos(angle),
+    y: centerY + planet.orbitRadius * Math.sin(angle)
+  };
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function easeInOutCubic(t) {
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function startViewTransition(newMode) {
+  if (newMode === viewMode) return;
+
+  viewTransition = {
+    from: viewMode,
+    to: newMode,
+    startTime: performance.now(),
+    duration: 900
+  };
+
+  viewMode = newMode;
+  planetTrails.clear();
+}
+
+function getViewTransitionT() {
+  if (!viewTransition) return 1;
+
+  const rawT = (performance.now() - viewTransition.startTime) / viewTransition.duration;
+  const t = Math.min(rawT, 1);
+
+  if (t >= 1) {
+    viewTransition = null;
+    return 1;
+  }
+
+  return easeInOutCubic(t);
 }
 
 function getMousePosition(event) {
@@ -822,6 +936,26 @@ function findPlanetAtPosition(x, y) {
   }
 
   return null;
+}
+
+function getOrbitAngleFromPoint(x, y, planet, centerX, centerY) {
+  if (viewMode !== "realistic") {
+    return getAngleFromPoint(x, y, centerX, centerY);
+  }
+
+  const a = getRealisticOrbitRadius(planet);
+  const e = planet.eccentricity ?? 0;
+  const b = a * Math.sqrt(1 - e * e);
+  const focusOffset = a * e;
+
+  const ellipseCenterX = centerX - focusOffset;
+
+  return normalizeAngle(
+    Math.atan2(
+      (y - centerY) / b,
+      (x - ellipseCenterX) / a
+    )
+  );
 }
 
 function isPointOnKerbol(x, y) {
@@ -1524,8 +1658,15 @@ function drawGhostTransferPosition(centerX, centerY) {
   // Ideální pozice targetu vůči aktuální pozici originu
   const ghostAngle = normalizeAngle(originAngle + degToRad(idealPhase));
 
-  const ghostX = centerX + selectedPlanet.orbitRadius * Math.cos(ghostAngle);
-  const ghostY = centerY + selectedPlanet.orbitRadius * Math.sin(ghostAngle);
+  const ghostPos = viewMode === "realistic"
+    ? getRealisticPlanetPosition(selectedPlanet, ghostAngle, centerX, centerY)
+    : {
+        x: centerX + selectedPlanet.orbitRadius * Math.cos(ghostAngle),
+        y: centerY + selectedPlanet.orbitRadius * Math.sin(ghostAngle)
+      };
+
+  const ghostX = ghostPos.x;
+  const ghostY = ghostPos.y;
 
   ctx.save();
 
@@ -1623,6 +1764,46 @@ function updateResetAnimation() {
   }
 }
 
+function drawOrbit(planet, centerX, centerY) {
+  ctx.strokeStyle = "rgba(255,255,255,0.2)";
+  ctx.beginPath();
+
+  const t = viewTransition ? getViewTransitionT() : 1;
+
+  let transitionT;
+
+  if (!viewTransition) {
+    transitionT = viewMode === "realistic" ? 1 : 0;
+  } else {
+    transitionT = viewTransition.to === "realistic" ? t : 1 - t;
+  }
+
+  const practicalA = planet.orbitRadius;
+  const practicalB = planet.orbitRadius;
+  const practicalOffset = 0;
+
+  const realisticA = getRealisticOrbitRadius(planet);
+  const e = planet.eccentricity ?? 0;
+  const realisticB = realisticA * Math.sqrt(1 - e * e);
+  const realisticOffset = realisticA * e;
+
+  const a = lerp(practicalA, realisticA, transitionT);
+  const b = lerp(practicalB, realisticB, transitionT);
+  const focusOffset = lerp(practicalOffset, realisticOffset, transitionT);
+
+  ctx.ellipse(
+    centerX - focusOffset,
+    centerY,
+    a,
+    b,
+    0,
+    0,
+    Math.PI * 2
+  );
+
+  ctx.stroke();
+}
+
 // render loop
 function draw() {
   updateRealtimeMotion();
@@ -1659,10 +1840,7 @@ function draw() {
 
   // 🟢 ORBITY
   planets.forEach(planet => {
-    ctx.strokeStyle = "rgba(255,255,255,0.2)";
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, planet.orbitRadius, 0, Math.PI * 2);
-    ctx.stroke();
+    drawOrbit(planet, centerX, centerY);
   });
 
   // 🚀 TRANSFER LINE

@@ -290,12 +290,25 @@ if (realtimeSpeedSlider) {
   realtimeSpeedSlider.value = 0;
 }
 
-const viewModeSelect = document.getElementById("viewModeSelect");
-if (viewModeSelect) {
-  viewModeSelect.value = viewMode;
+const viewModeButton = document.getElementById("viewModeButton");
 
-  viewModeSelect.addEventListener("change", () => {
-    startViewTransition(viewModeSelect.value);
+function updateViewModeButton() {
+  if (!viewModeButton) return;
+
+  viewModeButton.classList.toggle("active", viewMode === "realistic");
+
+  viewModeButton.title = viewMode === "realistic"
+    ? "Switch to practical view"
+    : "Switch to realistic view";
+}
+
+if (viewModeButton) {
+  updateViewModeButton();
+
+  viewModeButton.addEventListener("click", () => {
+    const nextMode = viewMode === "practical" ? "realistic" : "practical";
+    startViewTransition(nextMode);
+    updateViewModeButton();
   });
 }
 
@@ -890,6 +903,7 @@ function startViewTransition(newMode) {
 
   viewMode = newMode;
   planetTrails.clear();
+  updateViewModeButton();
 }
 
 function getViewTransitionT() {

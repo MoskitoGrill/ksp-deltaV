@@ -490,3 +490,11 @@ canvas {
   text-transform: uppercase;
   color: rgba(180, 240, 255, 0.9);
 }
+
+#moveWholeSystemButton {
+  transition: top 0.2s ease;
+}
+
+body.realtime-open #moveWholeSystemButton {
+  top: 155px;
+}

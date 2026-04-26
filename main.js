@@ -20,6 +20,7 @@ let realtimeEnabled = false;
 let realtimeLastFrame = null;
 let realtimeModeIndex = 0;
 let planetTrails = new Map();
+let resetAnimation = null;
 
 const STAR_COUNT = 260;
 const KSP_SECONDS_PER_MINUTE = 60;
@@ -144,7 +145,8 @@ const planets = [
     orbitalPeriod: 2215754,
     color: "gray",
     baseAngle: 1.4835,
-    manualAngle: null
+    manualAngle: null,
+    visualAngleOverride: null
   },
   {
     name: "Eve",
@@ -153,7 +155,8 @@ const planets = [
     orbitalPeriod: 5657995,
     color: "purple",
     baseAngle: 0.2618,
-    manualAngle: null
+    manualAngle: null,
+    visualAngleOverride: null
   },
   {
     name: "Kerbin",
@@ -162,7 +165,8 @@ const planets = [
     orbitalPeriod: 9203545,
     color: "blue",
     baseAngle: 0,
-    manualAngle: null
+    manualAngle: null,
+    visualAngleOverride: null
   },
   {
     name: "Duna",
@@ -171,7 +175,8 @@ const planets = [
     orbitalPeriod: 17315400,
     color: "orange",
     baseAngle: 2.3649,
-    manualAngle: null
+    manualAngle: null,
+    visualAngleOverride: null
   },
   {
     name: "Dres",
@@ -180,7 +185,8 @@ const planets = [
     orbitalPeriod: 47893063,
     color: "sandybrown",
     baseAngle: 0.1745,
-    manualAngle: null
+    manualAngle: null,
+    visualAngleOverride: null
   },
   {
     name: "Jool",
@@ -189,7 +195,8 @@ const planets = [
     orbitalPeriod: 104661432,
     color: "green",
     baseAngle: -2.1347,
-    manualAngle: null
+    manualAngle: null,
+    visualAngleOverride: null
   },
   {
     name: "Eeloo",
@@ -198,9 +205,16 @@ const planets = [
     orbitalPeriod: 156992048,
     color: "white",
     baseAngle: -0.8727,
-    manualAngle: null
+    manualAngle: null,
+    visualAngleOverride: null
   }
 ];
+
+const defaultPlanetAngles = new Map();
+
+planets.forEach(p => {
+  defaultPlanetAngles.set(p.name, p.baseAngle);
+});
 
 const marginInput = document.getElementById("marginInput");
 
@@ -396,6 +410,7 @@ function startRealtime() {
   realtimeEnabled = true;
   realtimeLastFrame = performance.now();
   realtimeSpeedControl.classList.add("visible");
+  document.body.classList.add("realtime-open");
   updateRealtimeButton();
 }
 
@@ -403,6 +418,7 @@ function stopRealtime() {
   realtimeEnabled = false;
   realtimeLastFrame = null;
   realtimeSpeedControl.classList.remove("visible");
+  document.body.classList.remove("realtime-open");
   updateRealtimeButton();
 }
 
@@ -524,7 +540,8 @@ window.addEventListener("touchcancel", stopTimeHold);
 updateTimeUiFromTime();
 
 resetDayOneButton.addEventListener("click", () => {
-  clearManualAngles();
+  stopRealtime();
+  resetPlanetsToDefaultAnimated();
   time = 0;
   updateTimeUiFromTime();
 });
@@ -1004,6 +1021,10 @@ function formatDuration(totalSeconds) {
 }
 
 function getPlanetAngle(planet, time) {
+  if (planet.visualAngleOverride !== null && planet.visualAngleOverride !== undefined) {
+    return planet.visualAngleOverride;
+  }
+
   if (planet.manualAngle !== null && planet.manualAngle !== undefined) {
     return planet.manualAngle;
   }
@@ -1544,10 +1565,66 @@ function commitManualPlanetPosition(planet) {
   planet.manualAngle = null;
 }
 
+function resetPlanetsToDefaultAnimated() {
+  const duration = 700;
+  const startTime = performance.now();
+
+  const startAngles = new Map();
+  const endAngles = new Map();
+
+  planets.forEach(planet => {
+    startAngles.set(planet.name, getPlanetAngle(planet, time));
+
+    const defaultAngle = defaultPlanetAngles.get(planet.name);
+    if (defaultAngle !== undefined) {
+      planet.baseAngle = defaultAngle;
+      planet.manualAngle = null;
+    }
+
+    endAngles.set(planet.name, getTimeBasedPlanetAngle(planet, 0));
+  });
+
+  resetAnimation = {
+    startTime,
+    duration,
+    startAngles,
+    endAngles
+  };
+}
+
+function updateResetAnimation() {
+  if (!resetAnimation) return;
+
+  const now = performance.now();
+  const rawT = (now - resetAnimation.startTime) / resetAnimation.duration;
+  const t = Math.min(rawT, 1);
+
+  const eased = 1 - Math.pow(1 - t, 3);
+
+  planets.forEach(planet => {
+    const start = resetAnimation.startAngles.get(planet.name);
+    const end = resetAnimation.endAngles.get(planet.name);
+
+    if (start === undefined || end === undefined) return;
+
+    const delta = angleDifference(end, start);
+    planet.visualAngleOverride = normalizeAngle(start + delta * eased);
+  });
+
+  if (t >= 1) {
+    planets.forEach(planet => {
+      planet.visualAngleOverride = null;
+    });
+
+    resetAnimation = null;
+    planetTrails.clear();
+  }
+}
+
 // render loop
 function draw() {
   updateRealtimeMotion();
-
+  updateResetAnimation();
   drawSpaceBackground();
 
   // střed (Slunce)

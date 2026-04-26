@@ -414,3 +414,79 @@ canvas {
 #leftInfoMargin input[type="number"] {
   -moz-appearance: textfield;
 }
+
+#realtimeSpeedControl {
+  display: none;
+  margin-top: 12px;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+#realtimeSpeedControl.visible {
+  display: flex;
+}
+
+#realtimeSpeedSlider {
+  width: 100%;
+  height: 18px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Chrome / Edge */
+#realtimeSpeedSlider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(120, 220, 255, 0.25),
+    rgba(120, 220, 255, 0.85)
+  );
+  box-shadow: 0 0 8px rgba(120, 220, 255, 0.25);
+}
+
+#realtimeSpeedSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: rgba(180, 245, 255, 1);
+  box-shadow:
+    0 0 6px rgba(120, 220, 255, 0.9),
+    0 0 14px rgba(120, 220, 255, 0.45);
+}
+
+/* Firefox */
+#realtimeSpeedSlider::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(120, 220, 255, 0.25),
+    rgba(120, 220, 255, 0.85)
+  );
+  box-shadow: 0 0 8px rgba(120, 220, 255, 0.25);
+}
+
+#realtimeSpeedSlider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(180, 245, 255, 1);
+  box-shadow:
+    0 0 6px rgba(120, 220, 255, 0.9),
+    0 0 14px rgba(120, 220, 255, 0.45);
+}
+
+.speedIcon {
+  font-size: 10px;
+  opacity: 0.65;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(180, 240, 255, 0.9);
+}

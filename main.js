@@ -258,6 +258,26 @@ const originSelect = document.getElementById("originSelect");
 const targetSelect = document.getElementById("targetSelect");
 const debugToggleButton = document.getElementById("debugToggleButton");
 const realtimeButton = document.getElementById("realtimeButton");
+const realtimeSpeedControl = document.getElementById("realtimeSpeedControl");
+const realtimeSpeedSlider = document.getElementById("realtimeSpeedSlider");
+if (realtimeSpeedSlider) {
+  realtimeSpeedSlider.min = 0;
+  realtimeSpeedSlider.max = 1;
+  realtimeSpeedSlider.step = 0.001;
+  realtimeSpeedSlider.value = 0;
+}
+
+realtimeSpeedSlider.addEventListener("wheel", (event) => {
+  event.preventDefault();
+
+  const direction = event.deltaY < 0 ? 1 : -1;
+  const step = event.shiftKey ? 0.1 : 0.07;
+
+  const currentValue = Number(realtimeSpeedSlider.value) || 0;
+  const nextValue = clamp(currentValue + direction * step, 0, 1);
+
+  realtimeSpeedSlider.value = nextValue;
+});
 
 debugToggleButton.addEventListener("click", () => {
   showDebugPanel = !showDebugPanel;
@@ -375,12 +395,14 @@ function updateRealtimeButton() {
 function startRealtime() {
   realtimeEnabled = true;
   realtimeLastFrame = performance.now();
+  realtimeSpeedControl.classList.add("visible");
   updateRealtimeButton();
 }
 
 function stopRealtime() {
   realtimeEnabled = false;
   realtimeLastFrame = null;
+  realtimeSpeedControl.classList.remove("visible");
   updateRealtimeButton();
 }
 
@@ -397,9 +419,9 @@ function updateRealtimeMotion() {
   const deltaSeconds = (now - realtimeLastFrame) / 1000;
   realtimeLastFrame = now;
 
-  const mode = realtimeModes[realtimeModeIndex];
+  const minutesPerSecond = getRealtimeMinutesPerSecond();
 
-  advanceTimeByMinutes(mode.minutesPerTick * deltaSeconds);
+  advanceTimeByMinutes(minutesPerSecond * deltaSeconds);
 }
 
 function toggleRealtime() {
@@ -412,12 +434,29 @@ function toggleRealtime() {
 
 function cycleRealtimeMode() {
   realtimeModeIndex = (realtimeModeIndex + 1) % realtimeModes.length;
+
+  if (realtimeSpeedSlider) {
+    realtimeSpeedSlider.value = realtimeModeIndex / (realtimeModes.length - 1);
+  }
+
   updateRealtimeButton();
 }
 
 function advanceTimeByMinutes(minutes) {
   time = Math.max(0, time + minutes * KSP_SECONDS_PER_MINUTE);
   updateTimeUiFromTime();
+}
+
+function getRealtimeMinutesPerSecond() {
+  const sliderValue = Number(realtimeSpeedSlider?.value ?? 0);
+
+  const minSpeed = 1;
+  const maxSpeed = KSP_DAYS_PER_YEAR * KSP_HOURS_PER_DAY * 60;
+
+  // křivka: na začátku přidává rychleji, ke konci jemněji
+  const t = Math.pow(sliderValue, 1);
+
+  return minSpeed + (maxSpeed - minSpeed) * t;
 }
 
 const timeInputs = [yearInput, dayInput, hourInput, minuteInput];

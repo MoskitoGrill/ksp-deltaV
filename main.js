@@ -1566,7 +1566,7 @@ function commitManualPlanetPosition(planet) {
 }
 
 function resetPlanetsToDefaultAnimated() {
-  const duration = 700;
+  const duration = 1100;
   const startTime = performance.now();
 
   const startAngles = new Map();
@@ -1599,7 +1599,9 @@ function updateResetAnimation() {
   const rawT = (now - resetAnimation.startTime) / resetAnimation.duration;
   const t = Math.min(rawT, 1);
 
-  const eased = 1 - Math.pow(1 - t, 3);
+  const eased = t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
   planets.forEach(planet => {
     const start = resetAnimation.startAngles.get(planet.name);

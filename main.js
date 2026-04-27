@@ -43,6 +43,26 @@ const realtimeModes = [
   { label: "year", tooltip: "Year", minutesPerTick: KSP_DAYS_PER_YEAR * KSP_HOURS_PER_DAY * 60 }
 ];
 
+const helpButton = document.getElementById("helpButton");
+const helpPanel = document.getElementById("helpPanel");
+
+let helpVisible = false;
+
+function updateHelpPanel() {
+  helpPanel.classList.toggle("visible", helpVisible);
+}
+
+helpButton.addEventListener("click", () => {
+  helpVisible = !helpVisible;
+  updateHelpPanel();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && helpVisible) {
+    helpVisible = false;
+    updateHelpPanel();
+  }
+});
 const dvMatrix = {
   Moho: {
     Eve: 20188,
@@ -2027,8 +2047,8 @@ if (selectedTargetType === "kerbol") {
     ctx.fillText("Window: no data", 20, 80);
   }
 } else {
-  ctx.fillText("Ideal: -", 20, 30);
-  ctx.fillText("Now: -", 20, 55);
+  ctx.fillText("Ideal Δv: -", 20, 30);
+  ctx.fillText("Now Δv: -", 20, 55);
   ctx.fillText("Window: -", 20, 80);
 }
 

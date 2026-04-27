@@ -544,15 +544,15 @@ body.realtime-open #moveWholeSystemButton {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: rgba(255, 230, 80, 0.95);
-  box-shadow: 0 0 6px rgba(255, 230, 80, 0.75);
+  background: rgba(201, 197, 176, 0.95);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.75);
 }
 
 .miniOrbit {
   position: absolute;
   left: 50%;
   top: 50%;
-  border: 1px solid rgba(180, 240, 255, 0.55);
+  border: 1px solid rgba(159, 198, 207, 0.55);
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
@@ -585,4 +585,232 @@ body.realtime-open #moveWholeSystemButton {
 #viewModeButton.active .orbitC {
   width: 36px;
   height: 36px;
+}
+
+/* HELP BUTTON */
+#helpButton {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 20;
+
+  width: 44px;
+  height: 44px;
+
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.65;
+}
+
+#helpButton:hover {
+  opacity: 1;
+}
+
+/* ikonka */
+.helpIcon {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.helpPlanet {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+
+  background: rgba(120, 220, 255, 0.9);
+  box-shadow:
+    0 0 6px rgba(120, 220, 255, 0.8),
+    0 0 14px rgba(120, 220, 255, 0.4);
+}
+
+.helpQuestion {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* PANEL */
+#helpPanel {
+  position: absolute;
+  right: 70px;
+  bottom: 18px;
+  z-index: 30;
+
+  width: 300px;
+  max-height: 420px;
+
+  background: rgba(0, 0, 0, 0.88);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+
+  padding: 0;
+
+  opacity: 0;
+  transform: scale(0.94) translateY(12px);
+  transform-origin: bottom right;
+  pointer-events: none;
+
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+#helpPanel.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+.helpContent {
+  max-height: 396px;
+  overflow-y: auto;
+  padding: 14px 16px;
+
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0px,
+    black 22px,
+    black calc(100% - 22px),
+    transparent 100%
+  );
+}
+
+.helpContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.helpContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.helpContent::-webkit-scrollbar-thumb {
+  background: rgba(120, 220, 255, 0.35);
+  border-radius: 999px;
+}
+
+.helpContent h3 {
+  margin: 0 0 10px 0;
+}
+
+.helpContent h4 {
+  margin-bottom: 6px;
+  margin-top: 14px;
+  color: rgba(120,220,255,0.95);
+}
+
+.helpContent p {
+  margin: 0 0 7px 0;
+  opacity: 0.88;
+  line-height: 1.4;
+}
+
+.helpKey {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 6px;
+  margin: 1px 2px;
+
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 5px;
+
+  background: rgba(255,255,255,0.08);
+  color: rgba(220, 250, 255, 0.95);
+
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.helpMouse {
+  display: inline-block;
+  padding: 2px 7px;
+  margin: 1px 2px;
+
+  border: 1px solid rgba(120,220,255,0.35);
+  border-radius: 999px;
+
+  background: rgba(120,220,255,0.08);
+  color: rgba(190,240,255,0.95);
+
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.helpInlineIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 28px;
+  height: 22px;
+  margin-right: 4px;
+
+  vertical-align: middle;
+}
+
+.helpSatelliteIcon {
+  color: rgba(120, 220, 255, 0.95);
+  font-size: 18px;
+  transform: rotate(25deg);
+  text-shadow:
+    0 0 6px rgba(120, 220, 255, 0.8),
+    0 0 14px rgba(120, 220, 255, 0.45);
+}
+
+.helpMiniSystemIcon {
+  position: relative;
+}
+
+.helpMiniSun {
+  position: absolute;
+  left: 12px;
+  top: 8px;
+
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+
+  background: rgba(255, 230, 80, 0.95);
+  box-shadow: 0 0 5px rgba(255, 230, 80, 0.75);
+}
+
+.helpMiniOrbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  border: 1px solid rgba(180, 240, 255, 0.58);
+  border-radius: 50%;
+
+  transform: translate(-50%, -50%);
+}
+
+.helpOrbitA {
+  width: 12px;
+  height: 7px;
+}
+
+.helpOrbitB {
+  width: 20px;
+  height: 11px;
+}
+
+.helpOrbitC {
+  width: 28px;
+  height: 16px;
 }

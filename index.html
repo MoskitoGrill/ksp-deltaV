@@ -82,6 +82,59 @@
         
         <button id="debugToggleButton" title="Debug panel" aria-label="Debug panel"></button>
 
+        <button id="helpButton">
+            <div class="helpIcon">
+                <div class="helpPlanet"></div>
+                <div class="helpQuestion">?</div>
+            </div>
+        </button>
+        <div id="helpPanel">
+            <div class="helpContent">
+                <h3>Help</h3>
+
+                <h4>Origin & Target</h4>
+                <p>Use the top panel to choose your starting planet and destination.</p>
+
+                <h4>Planet controls</h4>
+                <p><span class="helpMouse">Left click</span> select target planet.</p>
+                <p><span class="helpMouse">Right click</span> set planet as origin.</p>
+                <p><span class="helpMouse">Drag</span> move selected planet on its orbit.</p>
+
+                <h4>System control</h4>
+
+                <p>
+                    <span class="helpInlineIcon helpSatelliteIcon">🛰</span>
+                    <span class="helpMouse">Satellite</span>
+                    moves the whole system instead of one planet.
+                </p>
+
+                <p>
+                    <span class="helpInlineIcon helpMiniSystemIcon">
+                        <span class="helpMiniSun"></span>
+                        <span class="helpMiniOrbit helpOrbitA"></span>
+                        <span class="helpMiniOrbit helpOrbitB"></span>
+                        <span class="helpMiniOrbit helpOrbitC"></span>
+                    </span>
+                    <span class="helpMouse">System icon</span>
+                    switches between practical and realistic orbit view.
+                </p>
+
+                <h4>Margin</h4>
+                <p>Adds safety Δv percentage to the displayed values.</p>
+                <p><span class="helpMouse">Mouse wheel</span> over margin changes it.</p>
+
+                <h4>Time</h4>
+                <p><span class="helpKey">−</span> and <span class="helpKey">+</span> move time backward or forward.</p>
+                <p><span class="helpKey">Day 1</span> resets time and planet positions.</p>
+                <p><span class="helpMouse">Clock</span> starts realtime movement.</p>
+                <p><span class="helpMouse">Slider</span> controls realtime speed.</p>
+                <p><span class="helpMouse">Mouse wheel</span> over time inputs or slider changes values.</p>
+
+                <h4>Close</h4>
+                <p><span class="helpKey">ESC</span> closes this help panel.</p>
+            </div>
+        </div>
+
         <canvas id="spaceCanvas"></canvas>
 
         <div id="leftInfoMargin">

@@ -23,6 +23,8 @@ let planetTrails = new Map();
 let resetAnimation = null;
 let viewMode = "practical";
 let viewTransition = null;
+let marginHover = false;
+let marginEdit = false;
 
 const STAR_COUNT = 260;
 const KSP_SECONDS_PER_MINUTE = 60;
@@ -145,6 +147,7 @@ const planets = [
     orbitRadius: 60,
     realSemiMajorAxis: 5263138304,
     eccentricity: 0.2,
+    displayRadius: 4,
     orbitalPeriod: 2215754,
     color: "gray",
     baseAngle: 1.4835,
@@ -156,6 +159,7 @@ const planets = [
     orbitRadius: 100,
     realSemiMajorAxis: 9832684544,
     eccentricity: 0.01,
+    displayRadius: 7,
     orbitalPeriod: 5657995,
     color: "purple",
     baseAngle: 0.2618,
@@ -167,6 +171,7 @@ const planets = [
     orbitRadius: 140,
     realSemiMajorAxis: 13599840256,
     eccentricity: 0,
+    displayRadius: 6,
     orbitalPeriod: 9203545,
     color: "blue",
     baseAngle: 0,
@@ -178,6 +183,7 @@ const planets = [
     orbitRadius: 180,
     realSemiMajorAxis: 20726155264,
     eccentricity: 0.051,
+    displayRadius: 5,
     orbitalPeriod: 17315400,
     color: "orange",
     baseAngle: 2.3649,
@@ -189,6 +195,7 @@ const planets = [
     orbitRadius: 220,
     realSemiMajorAxis: 40839348203,
     eccentricity: 0.145,
+    displayRadius: 3.5,
     orbitalPeriod: 47893063,
     color: "sandybrown",
     baseAngle: 0.1745,
@@ -201,6 +208,7 @@ const planets = [
     realSemiMajorAxis: 68773560320,
     eccentricity: 0.05,
     orbitalPeriod: 104661432,
+    displayRadius: 11,
     color: "green",
     baseAngle: -2.1347,
     manualAngle: null,
@@ -213,6 +221,7 @@ const planets = [
     eccentricity: 0.26,
     orbitalPeriod: 156992048,
     color: "white",
+    displayRadius: 3.5,
     baseAngle: -0.8727,
     manualAngle: null,
     visualAngleOverride: null
@@ -312,17 +321,19 @@ if (viewModeButton) {
   });
 }
 
-realtimeSpeedSlider.addEventListener("wheel", (event) => {
-  event.preventDefault();
+if (realtimeSpeedSlider) {
+  realtimeSpeedSlider.addEventListener("wheel", (event) => {
+    event.preventDefault();
 
-  const direction = event.deltaY < 0 ? 1 : -1;
-  const step = event.shiftKey ? 0.1 : 0.07;
+    const direction = event.deltaY < 0 ? 1 : -1;
+    const step = event.shiftKey ? 0.1 : 0.07;
 
-  const currentValue = Number(realtimeSpeedSlider.value) || 0;
-  const nextValue = clamp(currentValue + direction * step, 0, 1);
+    const currentValue = Number(realtimeSpeedSlider.value) || 0;
+    const nextValue = clamp(currentValue + direction * step, 0, 1);
 
-  realtimeSpeedSlider.value = nextValue;
-});
+    realtimeSpeedSlider.value = nextValue;
+  });
+}
 
 debugToggleButton.addEventListener("click", () => {
   showDebugPanel = !showDebugPanel;
@@ -944,7 +955,9 @@ function findPlanetAtPosition(x, y) {
     const dy = y - pos.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < 10) {
+    const hitRadius = Math.max(10, (planet.displayRadius ?? 5) + 6);
+
+    if (distance < hitRadius) {
       return planet;
     }
   }
@@ -1907,8 +1920,16 @@ function draw() {
     
     const isSelected = selectedPlanet === planet;
     const hasManualAngle = planet.manualAngle !== null;
-    const radius = isSelected ? 8 : hasManualAngle ? 7 : 5;
+    const baseRadius = planet.displayRadius ?? 5;
+    const radius = isSelected ? baseRadius + 3 : hasManualAngle ? baseRadius + 2 : baseRadius;
     const isOrigin = selectedOrigin === planet.name;
+
+    let finalRadius = radius;
+
+    if (isSelected) {
+      const pulse = 1 + Math.sin(performance.now() * 0.005) * 0.1;
+      finalRadius = radius * pulse;
+    }
 
     if (hasManualAngle) {
       ctx.save();
@@ -1937,7 +1958,7 @@ function draw() {
 
     ctx.fillStyle = planet.color;
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+    ctx.arc(pos.x, pos.y, finalRadius, 0, Math.PI * 2);
     ctx.fill();
 
     // reset shadow

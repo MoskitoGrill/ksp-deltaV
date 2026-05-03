@@ -1817,7 +1817,7 @@ function updateResetAnimation() {
 }
 
 function drawOrbit(planet, centerX, centerY) {
-  ctx.strokeStyle = "rgba(255,255,255,0.2)";
+  ctx.strokeStyle = "rgba(255,255,255,0.15)";
   ctx.beginPath();
 
   const t = viewTransition ? getViewTransitionT() : 1;
@@ -2003,7 +2003,7 @@ function draw() {
     ctx.shadowColor = "rgba(0,0,0,0.8)";
     ctx.shadowBlur = 4;
 
-    ctx.fillText(planet.name, pos.x + 8, pos.y + 4);
+    ctx.fillText(planet.name, pos.x + finalRadius + 5, pos.y + 4);
 
     ctx.shadowBlur = 0;
   });
@@ -2118,7 +2118,7 @@ const panelHeight = infoLines.length * lineHeight + panelPaddingY;
 
 ctx.save();
 
-ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+ctx.fillStyle = "rgba(0, 0, 0, 0.48)";
 ctx.strokeStyle = "rgba(255,255,255,0.15)";
 ctx.lineWidth = 1;
 

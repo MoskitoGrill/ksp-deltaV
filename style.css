@@ -504,7 +504,8 @@ body.realtime-open #moveWholeSystemButton {
   left: 30px;
   top: 150px;
   z-index: 20;
-
+  transition: top 0.25s ease, opacity 0.2s;
+  
   width: 64px;
   height: 64px;
   padding: 0;

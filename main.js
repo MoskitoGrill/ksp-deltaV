@@ -2007,6 +2007,14 @@ function draw() {
 
   const infoLines = [];
 
+  const hasInfoTarget = selectedTargetType === "kerbol" || selectedPlanet;
+
+  if (marginInput) {
+    marginInput.parentElement.style.display = hasInfoTarget ? "flex" : "none";
+  }
+  
+  if (hasInfoTarget) {
+
 if (selectedTargetType === "kerbol") {
   const baseDv = selectedOrigin === "Kerbin" ? getBaseDvToTarget("Kerbol") : null;
 
@@ -2103,7 +2111,7 @@ infoLines.forEach(line => {
 
   infoY += lineHeight;
 });
-
+}
   if (showDebugPanel) {
     drawDebugPanel();
   }

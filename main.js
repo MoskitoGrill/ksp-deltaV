@@ -170,7 +170,7 @@ const planets = [
     eccentricity: 0.2,
     displayRadius: 4,
     orbitalPeriod: 2215754,
-    color: "gray",
+    color: "#8f8f8f",
     baseAngle: 1.4835,
     manualAngle: null,
     visualAngleOverride: null
@@ -182,7 +182,7 @@ const planets = [
     eccentricity: 0.01,
     displayRadius: 7,
     orbitalPeriod: 5657995,
-    color: "purple",
+    color: "#9b5de5",
     baseAngle: 0.2618,
     manualAngle: null,
     visualAngleOverride: null
@@ -194,7 +194,7 @@ const planets = [
     eccentricity: 0,
     displayRadius: 6,
     orbitalPeriod: 9203545,
-    color: "blue",
+    color: "#3f8cff",
     baseAngle: 0,
     manualAngle: null,
     visualAngleOverride: null
@@ -206,7 +206,7 @@ const planets = [
     eccentricity: 0.051,
     displayRadius: 5,
     orbitalPeriod: 17315400,
-    color: "orange",
+    color: "#d9823b",
     baseAngle: 2.3649,
     manualAngle: null,
     visualAngleOverride: null
@@ -218,7 +218,7 @@ const planets = [
     eccentricity: 0.145,
     displayRadius: 3.5,
     orbitalPeriod: 47893063,
-    color: "sandybrown",
+    color: "#c2b280",
     baseAngle: 0.1745,
     manualAngle: null,
     visualAngleOverride: null
@@ -230,7 +230,7 @@ const planets = [
     eccentricity: 0.05,
     orbitalPeriod: 104661432,
     displayRadius: 11,
-    color: "green",
+    color: "#74c96b",
     baseAngle: -2.1347,
     manualAngle: null,
     visualAngleOverride: null
@@ -241,7 +241,7 @@ const planets = [
     realSemiMajorAxis: 90118820000,
     eccentricity: 0.26,
     orbitalPeriod: 156992048,
-    color: "white",
+    color: "#e8edf2",
     displayRadius: 3.5,
     baseAngle: -0.8727,
     manualAngle: null,
@@ -2012,7 +2012,7 @@ function draw() {
   if (marginInput) {
     marginInput.parentElement.style.display = hasInfoTarget ? "flex" : "none";
   }
-  
+
   if (hasInfoTarget) {
 
 if (selectedTargetType === "kerbol") {

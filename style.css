@@ -521,6 +521,14 @@ body.realtime-open #moveWholeSystemButton {
   justify-content: center;
 }
 
+#viewModeButton.compact {
+  top: 10px;
+}
+
+#viewModeButton.withPanel {
+  top: 150px;
+}
+
 #viewModeButton:hover {
   opacity: 1;
 }

@@ -26,6 +26,9 @@ let viewTransition = null;
 let marginHover = false;
 let marginEdit = false;
 let hoveredPlanet = null;
+let infoPanelVisible = false;
+let lastHasInfoTarget = false;
+let infoPanelRevealTimeout = null;
 
 const STAR_COUNT = 260;
 const KSP_SECONDS_PER_MINUTE = 60;
@@ -2008,6 +2011,37 @@ function draw() {
   const infoLines = [];
 
   const hasInfoTarget = selectedTargetType === "kerbol" || selectedPlanet;
+
+  if (viewModeButton) {
+    viewModeButton.classList.toggle("withPanel", hasInfoTarget);
+    viewModeButton.classList.toggle("compact", !hasInfoTarget);
+  }
+
+  if (hasInfoTarget !== lastHasInfoTarget) {
+    lastHasInfoTarget = hasInfoTarget;
+
+    clearTimeout(infoPanelRevealTimeout);
+
+    if (viewModeButton) {
+      viewModeButton.classList.toggle("withPanel", hasInfoTarget);
+      viewModeButton.classList.toggle("compact", !hasInfoTarget);
+    }
+
+    if (hasInfoTarget) {
+      infoPanelVisible = false;
+
+      infoPanelRevealTimeout = setTimeout(() => {
+        infoPanelVisible = true;
+      }, 450);
+    } else {
+      infoPanelVisible = false;
+    }
+  }
+
+  if (viewModeButton) {
+    viewModeButton.classList.toggle("withPanel", hasInfoTarget);
+    viewModeButton.classList.toggle("compact", !hasInfoTarget);
+  }
 
   if (marginInput) {
     marginInput.parentElement.style.display = hasInfoTarget ? "flex" : "none";

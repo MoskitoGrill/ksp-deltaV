@@ -1878,17 +1878,20 @@ function draw() {
     ctx.stroke();
   }
 
-  if (isKerbolSelected) {
-    ctx.shadowColor = "yellow";
-    ctx.shadowBlur = 15;
-  }
+  ctx.save();
 
-  ctx.fillStyle = "yellow";
+  ctx.shadowColor = isKerbolSelected
+    ? "rgba(255, 240, 80, 0.95)"
+    : "rgba(255, 220, 80, 0.55)";
+
+  ctx.shadowBlur = isKerbolSelected ? 24 : 14;
+
+  ctx.fillStyle = "rgb(255, 220, 60)";
   ctx.beginPath();
   ctx.arc(centerX, centerY, isKerbolSelected ? 14 : 10, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.shadowBlur = 0;
+  ctx.restore();
 
   // 🟢 ORBITY
   planets.forEach(planet => {

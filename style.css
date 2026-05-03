@@ -128,7 +128,8 @@ canvas {
   border: none;
   background: transparent;
   cursor: pointer;
-  opacity: 0.55;
+  opacity: 0.62;
+  transition: opacity 0.2s ease, top 0.25s ease;
 }
 
 .satelliteIcon {
@@ -229,7 +230,8 @@ canvas {
   border: none;
   background: transparent;
   cursor: pointer;
-  opacity: 0.55;
+  opacity: 0.62;
+  transition: opacity 0.2s ease, top 0.25s ease;
 }
 
 #debugToggleButton::before {
@@ -505,7 +507,7 @@ body.realtime-open #moveWholeSystemButton {
   top: 150px;
   z-index: 20;
   transition: top 0.25s ease, opacity 0.2s;
-  
+
   width: 64px;
   height: 64px;
   padding: 0;
@@ -516,6 +518,7 @@ body.realtime-open #moveWholeSystemButton {
 
   cursor: pointer;
   opacity: 0.62;
+  transition: opacity 0.2s ease, top 0.25s ease;
 
   display: flex;
   align-items: center;
@@ -609,7 +612,8 @@ body.realtime-open #moveWholeSystemButton {
   border: none;
   background: transparent;
   cursor: pointer;
-  opacity: 0.65;
+  opacity: 0.62;
+  transition: opacity 0.2s ease, top 0.25s ease;
 }
 
 #helpButton:hover {

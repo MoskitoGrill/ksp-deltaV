@@ -776,6 +776,27 @@ canvas.addEventListener("mousemove", (event) => {
   lastDragAngle = newAngle;
 });
 
+canvas.addEventListener("wheel", (event) => {
+  const mouse = getMousePosition(event);
+  const planet = findOrbitAtPosition(mouse.x, mouse.y);
+
+  if (!planet || planet.name === "Kerbin") return;
+
+  event.preventDefault();
+
+  const direction = event.deltaY < 0 ? 1 : -1;
+  const stepDeg = event.shiftKey ? 10 : 2;
+  const stepRad = degToRad(stepDeg) * direction;
+
+  planet.manualAngle = normalizeAngle(getPlanetAngle(planet, time) + stepRad);
+
+  selectedPlanet = planet;
+  selectedTargetType = "planet";
+  targetSelect.value = planet.name;
+
+  commitManualPlanetPosition(planet);
+}, { passive: false });
+
 canvas.addEventListener("contextmenu", (event) => {
   event.preventDefault();
 
@@ -936,6 +957,33 @@ function findPlanetAtPosition(x, y) {
   }
 
   return null;
+}
+
+function findOrbitAtPosition(x, y) {
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  let bestPlanet = null;
+  let bestDistance = Infinity;
+
+  planets.forEach(planet => {
+    const angle = getOrbitAngleFromPoint(x, y, planet, centerX, centerY);
+
+    const orbitPos = viewMode === "realistic"
+      ? getRealisticPlanetPosition(planet, angle, centerX, centerY)
+      : getPracticalPlanetPositionByAngle(planet, angle, centerX, centerY);
+
+    const dx = x - orbitPos.x;
+    const dy = y - orbitPos.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestPlanet = planet;
+    }
+  });
+
+  return bestDistance < 12 ? bestPlanet : null;
 }
 
 function getOrbitAngleFromPoint(x, y, planet, centerX, centerY) {
@@ -1360,6 +1408,11 @@ function getTransferLineColor() {
     shadow: `rgba(${r}, ${g}, ${b}, 0.35)`
   };
 }
+
+const isSameOriginAndTarget =
+  selectedTargetType === "planet" &&
+  selectedPlanet &&
+  selectedPlanet.name === selectedOrigin;
 
 function drawTransferLine(centerX, centerY) {
   const originPos = getOriginPosition(centerX, centerY);
@@ -1864,7 +1917,14 @@ function drawPlanets(centerX, centerY) {
 
 function drawInfoPanel() {
   const infoLines = [];
-  const hasInfoTarget = selectedTargetType === "kerbol" || selectedPlanet;
+  const isSameOriginAndTarget =
+    selectedTargetType === "planet" &&
+    selectedPlanet &&
+    selectedPlanet.name === selectedOrigin;
+
+  const hasInfoTarget =
+    (selectedTargetType === "kerbol" || selectedPlanet) &&
+    !isSameOriginAndTarget;
 
   if (viewModeButton) {
     viewModeButton.classList.toggle("withPanel", hasInfoTarget);

@@ -1328,9 +1328,12 @@ function getIdealTransferAngle(originName, targetName) {
     return null;
   }
 
-  // Pokud máme ručně zadaný Kerbin -> target úhel z mapy, použijeme ho
   if (originName === "Kerbin" && transferAngleMap[targetName]) {
     return transferAngleMap[targetName].transferAngle;
+  }
+
+  if (targetName === "Kerbin" && transferAngleMap[originName]) {
+    return transferAngleMap[originName].returnAngle;
   }
 
   const origin = getPlanetByName(originName);

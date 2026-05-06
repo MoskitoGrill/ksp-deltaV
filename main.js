@@ -1390,129 +1390,77 @@ function drawTransferLine(centerX, centerY) {
   drawGlowingCurve(originPos, targetPos, centerX, centerY, 0.55, direction);
 }
 
+function buildTransferCurvePath(start, end, centerX, centerY, curveStrength, deltaAngle) {
+  const path = new Path2D();
+
+  const startAngle = Math.atan2(start.y - centerY, start.x - centerX);
+  const startRadius = Math.hypot(start.x - centerX, start.y - centerY);
+  const endRadius = Math.hypot(end.x - centerX, end.y - centerY);
+  const steps = 80;
+  const distance = Math.hypot(end.x - start.x, end.y - start.y);
+  const maxBend = Math.min(45, distance * 0.25);
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const angle = startAngle + deltaAngle * t;
+    const radius = startRadius + (endRadius - startRadius) * t;
+
+    const gravityBend = Math.sin(t * Math.PI) * maxBend * curveStrength;
+    const bendDirection = endRadius > startRadius ? 1 : -1;
+    const finalRadius = radius + gravityBend * bendDirection;
+
+    let x = centerX + Math.cos(angle) * finalRadius;
+    let y = centerY + Math.sin(angle) * finalRadius;
+
+    planets.forEach(planet => {
+      const pos = getPlanetPosition(planet, centerX, centerY);
+      const dx = x - pos.x;
+      const dy = y - pos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      const influenceRadius = 40;
+
+      if (dist > 0 && dist < influenceRadius) {
+        const strength = 1 - dist / influenceRadius;
+        const push = 6 * strength * strength;
+
+        x += (dx / dist) * push;
+        y += (dy / dist) * push;
+      }
+    });
+
+    if (i === 0) path.moveTo(x, y);
+    else path.lineTo(x, y);
+  }
+
+  return path;
+}
+
 function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction = 1) {
   const shimmer = 1 + Math.sin(performance.now() * 0.002) * 0.15;
   const startAngle = Math.atan2(start.y - centerY, start.x - centerX);
   const endAngle = Math.atan2(end.y - centerY, end.x - centerX);
 
-  const startRadius = Math.hypot(start.x - centerX, start.y - centerY);
-  const endRadius = Math.hypot(end.x - centerX, end.y - centerY);
-
-  let deltaAngle;
-
-  if (direction >= 0) {
-    // prograde směr: vždy dopředu proti směru hodinových ručiček
-    deltaAngle = normalizeAngle(endAngle - startAngle);
-  } else {
-    // retrograde/vnitřní transfer: opačný oblouk
-    deltaAngle = -normalizeAngle(startAngle - endAngle);
-  }
-  const steps = 80;
+  const deltaAngle = direction >= 0
+    ? normalizeAngle(endAngle - startAngle)
+    : -normalizeAngle(startAngle - endAngle);
 
   const lineColor = getTransferLineColor();
+  const path = buildTransferCurvePath(start, end, centerX, centerY, curveStrength, deltaAngle);
 
   ctx.save();
 
-  // glow vrstva
   ctx.strokeStyle = lineColor.glow;
   ctx.lineWidth = 6;
   ctx.shadowColor = lineColor.shadow;
   ctx.shadowBlur = 8;
+  ctx.stroke(path);
 
-  ctx.beginPath();
-
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-
-    const angle = startAngle + deltaAngle * t;
-
-    // radius se plynule mění od origin orbity k target orbitě
-    const radius = startRadius + (endRadius - startRadius) * t;
-
-    // malé gravitační prohnutí směrem ke Slunci
-    const distance = Math.hypot(end.x - start.x, end.y - start.y);
-    const maxBend = Math.min(45, distance * 0.25);
-    const gravityBend = Math.sin(t * Math.PI) * maxBend * curveStrength;
-    const isOuterTransfer = endRadius > startRadius;
-    const bendDirection = isOuterTransfer ? 1 : -1;
-    const finalRadius = radius + gravityBend * bendDirection;
-
-    let x = centerX + Math.cos(angle) * finalRadius;
-    let y = centerY + Math.sin(angle) * finalRadius;
-
-    // 👇 PLANETARY INFLUENCE
-    planets.forEach(planet => {
-      const pos = getPlanetPosition(planet, centerX, centerY);
-
-      const dx = x - pos.x;
-      const dy = y - pos.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      const influenceRadius = 40; // ladit
-      if (dist < influenceRadius) {
-        const strength = (1 - dist / influenceRadius);
-
-        // směr od planety (odpuzování = gravitační ohyb)
-        const push = 6 * strength * strength; // ladit
-
-        x += (dx / dist) * push;
-        y += (dy / dist) * push;
-      }
-    });
-
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-
-  ctx.stroke();
-
-  // ostrá linka
   ctx.strokeStyle = lineColor.sharp;
   ctx.lineWidth = 1.2 * shimmer;
   ctx.shadowBlur = 0;
+  ctx.stroke(path);
 
-  ctx.beginPath();
-
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-
-    const angle = startAngle + deltaAngle * t;
-    const radius = startRadius + (endRadius - startRadius) * t;
-    const distance = Math.hypot(end.x - start.x, end.y - start.y);
-    const maxBend = Math.min(45, distance * 0.25);
-    const gravityBend = Math.sin(t * Math.PI) * maxBend * curveStrength;
-    const isOuterTransfer = endRadius > startRadius;
-    const bendDirection = isOuterTransfer ? 1 : -1;
-    const finalRadius = radius + gravityBend * bendDirection;
-
-    let x = centerX + Math.cos(angle) * finalRadius;
-    let y = centerY + Math.sin(angle) * finalRadius;
-
-    // 👇 PLANETARY INFLUENCE
-    planets.forEach(planet => {
-      const pos = getPlanetPosition(planet, centerX, centerY);
-
-      const dx = x - pos.x;
-      const dy = y - pos.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      const influenceRadius = 40; // ladit
-      if (dist < influenceRadius) {
-        const strength = (1 - dist / influenceRadius);
-
-        // směr od planety (odpuzování = gravitační ohyb)
-        const push = 6 * strength * strength; // ladit
-
-        x += (dx / dist) * push;
-        y += (dy / dist) * push;
-      }
-    });
-
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-
-  ctx.stroke();
   ctx.restore();
 }
 

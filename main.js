@@ -23,8 +23,6 @@ let planetTrails = new Map();
 let resetAnimation = null;
 let viewMode = "practical";
 let viewTransition = null;
-let marginHover = false;
-let marginEdit = false;
 let hoveredPlanet = null;
 let infoPanelVisible = false;
 let lastHasInfoTarget = false;
@@ -699,24 +697,6 @@ function drawSpaceBackground() {
 }
 
 canvas.addEventListener("mousedown", (event) => {
-  if (!marginHover) return;
-
-  const newValue = prompt("Margin %:", marginPercent);
-
-  if (newValue !== null) {
-    const parsedValue = Number(newValue);
-
-    if (Number.isFinite(parsedValue) && parsedValue >= 0) {
-      marginPercent = parsedValue;
-
-      if (marginInput) {
-        marginInput.value = marginPercent;
-      }
-    }
-  }
-});
-
-canvas.addEventListener("mousedown", (event) => {
   if (event.button !== 0) return;
 
   const mouse = getMousePosition(event);
@@ -758,28 +738,10 @@ canvas.addEventListener("mousedown", (event) => {
   console.log("Selected planet:", planet.name);
 });
 
-canvas.addEventListener("wheel", (event) => {
-  if (!marginHover) return;
-
-  event.preventDefault();
-
-  const direction = event.deltaY < 0 ? 1 : -1;
-  const step = event.shiftKey ? 10 : 1;
-
-  marginPercent = Math.max(0, marginPercent + direction * step);
-});
-
 canvas.addEventListener("mousemove", (event) => {
   const mouse = getMousePosition(event);
 
   hoveredPlanet = findPlanetAtPosition(mouse.x, mouse.y);
-
-  marginHover = (
-    mouse.x > 20 &&
-    mouse.x < 180 &&
-    mouse.y > 115 &&
-    mouse.y < 140
-  );
 
   if (!isDraggingPlanet || !draggedPlanet) return;
 

@@ -24,9 +24,6 @@ let resetAnimation = null;
 let viewMode = "practical";
 let viewTransition = null;
 let hoveredPlanet = null;
-let infoPanelVisible = false;
-let lastHasInfoTarget = false;
-let infoPanelRevealTimeout = null;
 
 const STAR_COUNT = 260;
 const KSP_SECONDS_PER_MINUTE = 60;
@@ -123,17 +120,6 @@ const dvMatrix = {
     Dres: 8470,
     Jool: 11837
   }
-};
-
-const baseDvMap = {
-  Kerbol: 36070,
-  Moho: 8350,
-  Eve: 5830,
-  Kerbin: 0,
-  Duna: 5110,
-  Dres: 6650,
-  Jool: 8310,
-  Eeloo: 7600
 };
 
 const transferAngleMap = {
@@ -1016,10 +1002,6 @@ function radToDeg(radians) {
   return radians * 180 / Math.PI;
 }
 
-function normalizeDegrees(degrees) {
-  return ((degrees % 360) + 360) % 360;
-}
-
 function drawTextWithMargin(text, x, y, marginPercent) {
   ctx.fillStyle = "white";
   ctx.font = "16px Arial";
@@ -1056,6 +1038,10 @@ function getCurrentPhaseAngle(targetPlanet) {
   return radToDeg(phaseRad);
 }
 
+// TODO later:
+// Current DV is only a visual/gameplay estimate based on phase angle error.
+// Later this should be replaced by a porkchop-style transfer search:
+// departure time + travel time -> ejection DV + insertion DV.
 function getCurrentDvEstimate(planet) {
   const baseDv = getBaseDvToPlanet(planet);
   const idealPhase = getIdealTransferAngle(selectedOrigin, planet?.name);
@@ -1092,6 +1078,10 @@ function getCurrentDvEstimate(planet) {
   };
 }
 
+// TODO later:
+// This finds the next simple phase-angle window.
+// Later: search multiple departure dates and travel durations,
+// then choose the lowest practical DV window.
 function findNextTransferWindow(planet) {
   if (!planet || planet.name === selectedOrigin || selectedOrigin === "Kerbol") {
     return null;
@@ -1244,37 +1234,6 @@ function getRelativeAngularSpeedToKerbin(planet) {
   const kerbinAngularSpeed = (Math.PI * 2) / kerbin.orbitalPeriod;
 
   return planetAngularSpeed - kerbinAngularSpeed;
-}
-
-function getRelativeAngularSpeedBetween(originName, targetName) {
-  const origin = getPlanetByName(originName);
-  const target = getPlanetByName(targetName);
-
-  if (!origin || !target || origin.name === target.name) {
-    return 0;
-  }
-
-  if (!origin.orbitalPeriod || !target.orbitalPeriod) {
-    return 0;
-  }
-
-  const originAngularSpeed = (Math.PI * 2) / origin.orbitalPeriod;
-  const targetAngularSpeed = (Math.PI * 2) / target.orbitalPeriod;
-
-  return targetAngularSpeed - originAngularSpeed;
-}
-
-function getTimeFromDragDelta(planet, newAngle) {
-  const relativeSpeed = getRelativeAngularSpeedToKerbin(planet);
-
-  if (relativeSpeed === 0) {
-    return time;
-  }
-
-  const deltaAngle = angleDifference(newAngle, dragStartAngle);
-  const deltaTime = deltaAngle / relativeSpeed;
-
-  return Math.max(0, dragStartTime + deltaTime);
 }
 
 function hasManualOverrides() {
@@ -1439,8 +1398,6 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction
   const startRadius = Math.hypot(start.x - centerX, start.y - centerY);
   const endRadius = Math.hypot(end.x - centerX, end.y - centerY);
 
-  const arcRadius = (startRadius + endRadius) / 2;
-
   let deltaAngle;
 
   if (direction >= 0) {
@@ -1450,9 +1407,6 @@ function drawGlowingCurve(start, end, centerX, centerY, curveStrength, direction
     // retrograde/vnitřní transfer: opačný oblouk
     deltaAngle = -normalizeAngle(startAngle - endAngle);
   }
-
-  const distance = Math.hypot(end.x - start.x, end.y - start.y);
-  const maxBend = Math.min(45, distance * 0.25);
   const steps = 80;
 
   const lineColor = getTransferLineColor();
@@ -1622,6 +1576,7 @@ function drawDebugPanel() {
       const windowDvWithMargin = applyMargin(windowEstimate.dv, marginPercent);
       line(`Window error: ${windowEstimate.errorDeg.toFixed(1)}°`);
       line(`Window Δv + margin: ${windowDvWithMargin} m/s`);
+      line("Window type: phase estimate");
     } else {
       line("Window: no data");
     }
@@ -1979,32 +1934,6 @@ function draw() {
   const infoLines = [];
 
   const hasInfoTarget = selectedTargetType === "kerbol" || selectedPlanet;
-
-  if (viewModeButton) {
-    viewModeButton.classList.toggle("withPanel", hasInfoTarget);
-    viewModeButton.classList.toggle("compact", !hasInfoTarget);
-  }
-
-  if (hasInfoTarget !== lastHasInfoTarget) {
-    lastHasInfoTarget = hasInfoTarget;
-
-    clearTimeout(infoPanelRevealTimeout);
-
-    if (viewModeButton) {
-      viewModeButton.classList.toggle("withPanel", hasInfoTarget);
-      viewModeButton.classList.toggle("compact", !hasInfoTarget);
-    }
-
-    if (hasInfoTarget) {
-      infoPanelVisible = false;
-
-      infoPanelRevealTimeout = setTimeout(() => {
-        infoPanelVisible = true;
-      }, 450);
-    } else {
-      infoPanelVisible = false;
-    }
-  }
 
   if (viewModeButton) {
     viewModeButton.classList.toggle("withPanel", hasInfoTarget);

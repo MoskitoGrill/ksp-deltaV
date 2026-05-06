@@ -1776,17 +1776,7 @@ function drawOrbit(planet, centerX, centerY) {
   ctx.stroke();
 }
 
-// render loop
-function draw() {
-  updateRealtimeMotion();
-  updateResetAnimation();
-  drawSpaceBackground();
-
-  // střed (Slunce)
-  const centerX = canvas.width / 2;
-  const centerY = canvas.height / 2;
-
-  // ☀️ Slunce
+function drawKerbol(centerX, centerY) {
   const isKerbolOrigin = selectedOrigin === "Kerbol";
   const isKerbolSelected = selectedTargetType === "kerbol";
 
@@ -1812,60 +1802,55 @@ function draw() {
   ctx.fill();
 
   ctx.restore();
+}
 
-  // 🟢 ORBITY
+function drawOrbits(centerX, centerY) {
   planets.forEach(planet => {
     drawOrbit(planet, centerX, centerY);
   });
+}
 
-  // 🚀 TRANSFER LINE
-  drawTransferLine(centerX, centerY);
-
-  // 👻 IDEAL WINDOW GHOST POSITION
-  drawGhostTransferPosition(centerX, centerY);
-
-  if (realtimeEnabled) {
-    planets.forEach(p => {
-      const pos = getPlanetPosition(p, centerX, centerY);
-
-      if (!planetTrails.has(p.name)) {
-        planetTrails.set(p.name, []);
-      }
-
-      const trail = planetTrails.get(p.name);
-
-      trail.push({ x: pos.x, y: pos.y });
-
-      if (trail.length > 40) trail.shift();
-
-      ctx.save();
-      ctx.beginPath();
-
-      for (let i = 0; i < trail.length; i++) {
-        const t = i / trail.length;
-        ctx.globalAlpha = t * 0.35;
-
-        if (i === 0) ctx.moveTo(trail[i].x, trail[i].y);
-        else ctx.lineTo(trail[i].x, trail[i].y);
-      }
-
-      ctx.strokeStyle = p.color;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.restore();
-    });
-  } else {
+function drawPlanetTrails(centerX, centerY) {
+  if (!realtimeEnabled) {
     planetTrails.clear();
+    return;
   }
 
-  // 🔵 PLANETY
+  planets.forEach(p => {
+    const pos = getPlanetPosition(p, centerX, centerY);
+
+    if (!planetTrails.has(p.name)) {
+      planetTrails.set(p.name, []);
+    }
+
+    const trail = planetTrails.get(p.name);
+
+    trail.push({ x: pos.x, y: pos.y });
+
+    if (trail.length > 40) trail.shift();
+
+    ctx.save();
+    ctx.beginPath();
+
+    for (let i = 0; i < trail.length; i++) {
+      const t = i / trail.length;
+      ctx.globalAlpha = t * 0.35;
+
+      if (i === 0) ctx.moveTo(trail[i].x, trail[i].y);
+      else ctx.lineTo(trail[i].x, trail[i].y);
+    }
+
+    ctx.strokeStyle = p.color;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawPlanets(centerX, centerY) {
   planets.forEach(planet => {
     const pos = getPlanetPosition(planet, centerX, centerY);
 
-    // planeta
-    ctx.fillStyle = planet.color;
-    ctx.beginPath();
-    
     const isSelected = selectedPlanet === planet;
     const isHovered = hoveredPlanet === planet;
     const hasManualAngle = planet.manualAngle !== null;
@@ -1901,11 +1886,10 @@ function draw() {
 
       ctx.restore();
     }
-    
-    // glow efekt
+
     if (isSelected) {
-    ctx.shadowColor = "white";
-    ctx.shadowBlur = 10;
+      ctx.shadowColor = "white";
+      ctx.shadowBlur = 10;
     }
 
     if (isOrigin) {
@@ -1917,10 +1901,8 @@ function draw() {
     ctx.arc(pos.x, pos.y, finalRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // reset shadow
     ctx.shadowBlur = 0;
 
-    // název
     ctx.fillStyle = "white";
     ctx.font = "12px Arial";
     ctx.shadowColor = "rgba(0,0,0,0.8)";
@@ -1930,80 +1912,100 @@ function draw() {
 
     ctx.shadowBlur = 0;
   });
-
-  const infoLines = [];
-
-  const hasInfoTarget = selectedTargetType === "kerbol" || selectedPlanet;
-
-  if (viewModeButton) {
-    viewModeButton.classList.toggle("withPanel", hasInfoTarget);
-    viewModeButton.classList.toggle("compact", !hasInfoTarget);
-  }
-
-  if (marginInput) {
-    marginInput.parentElement.style.display = hasInfoTarget ? "flex" : "none";
-  }
-
-  if (hasInfoTarget) {
-
-if (selectedTargetType === "kerbol") {
-  const baseDv = selectedOrigin === "Kerbin" ? getBaseDvToTarget("Kerbol") : null;
-
-  if (baseDv !== null) {
-    const idealWithMargin = applyMargin(baseDv, marginPercent);
-
-    infoLines.push({ text: `Ideal: ${idealWithMargin} m/s`, margin: true });
-    infoLines.push({ text: `Now: ${idealWithMargin} m/s`, margin: true });
-    infoLines.push({ text: selectedOrigin === "Kerbin" ? "Window: anytime" : "Window: not applicable" });
-  } else {
-    infoLines.push({ text: "Ideal: no data" });
-    infoLines.push({ text: "Now: no data" });
-    infoLines.push({ text: "Window: not applicable" });
-  }
-
-} else if (selectedPlanet) {
-  const dvEstimate = getCurrentDvEstimate(selectedPlanet);
-  const windowEstimate = findNextTransferWindow(selectedPlanet);
-
-  if (dvEstimate) {
-    const idealWithMargin = applyMargin(dvEstimate.baseDv, marginPercent);
-    const nowWithMargin = applyMargin(dvEstimate.estimatedDv, marginPercent);
-
-    infoLines.push({ text: `Ideal: ${idealWithMargin} m/s`, margin: true });
-    infoLines.push({ text: `Now: ${nowWithMargin} m/s`, margin: true });
-
-    if (windowEstimate) {
-      const windowText = windowEstimate.timeFromNow === 0
-        ? "now"
-        : formatDuration(windowEstimate.timeFromNow);
-
-      infoLines.push({ text: `Window in: ${windowText}` });
-      infoLines.push({ text: `Window time: ${formatKspTime(windowEstimate.time)}` });
-    }
-  } else {
-    const baseDv = getBaseDvToPlanet(selectedPlanet);
-    const idealWithMargin = applyMargin(baseDv, marginPercent);
-
-    infoLines.push({ text: `Ideal: ${idealWithMargin ?? "-"} m/s`, margin: true });
-    infoLines.push({ text: "Now: no data" });
-    infoLines.push({ text: "Window: no data" });
-  }
-
-} else {
-  infoLines.push({ text: "Ideal Δv: -" });
-  infoLines.push({ text: "Now Δv: -" });
-  infoLines.push({ text: "Window: -" });
 }
 
-ctx.font = "16px Arial";
+// render loop
+function draw() {
+  updateRealtimeMotion();
+  updateResetAnimation();
+  drawSpaceBackground();
 
-let maxWidth = 0;
+  // střed (Slunce)
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
 
-infoLines.forEach(line => {
-  const textWidth = ctx.measureText(line.text).width;
-  if (textWidth > maxWidth) maxWidth = textWidth;
-});
+  // ☀️ Sun
+  drawKerbol(centerX, centerY);
 
+  // 🟢 ORBITY
+  drawOrbits(centerX, centerY);
+
+  // 🚀 TRANSFER LINE
+  drawTransferLine(centerX, centerY);
+
+  // 👻 IDEAL WINDOW GHOST POSITION
+  drawGhostTransferPosition(centerX, centerY);
+
+  drawPlanetTrails(centerX, centerY);
+
+  drawPlanets(centerX, centerY);
+
+const infoLines = [];
+
+const hasInfoTarget = selectedTargetType === "kerbol" || selectedPlanet;
+
+if (viewModeButton) {
+  viewModeButton.classList.toggle("withPanel", hasInfoTarget);
+  viewModeButton.classList.toggle("compact", !hasInfoTarget);
+}
+
+if (marginInput) {
+  marginInput.parentElement.style.display = hasInfoTarget ? "flex" : "none";
+}
+
+if (hasInfoTarget) {
+  if (selectedTargetType === "kerbol") {
+    const baseDv = selectedOrigin === "Kerbin" ? getBaseDvToTarget("Kerbol") : null;
+
+    if (baseDv !== null) {
+      const idealWithMargin = applyMargin(baseDv, marginPercent);
+
+      infoLines.push({ text: `Ideal: ${idealWithMargin} m/s`, margin: true });
+      infoLines.push({ text: `Now: ${idealWithMargin} m/s`, margin: true });
+      infoLines.push({ text: selectedOrigin === "Kerbin" ? "Window: anytime" : "Window: not applicable" });
+    } else {
+      infoLines.push({ text: "Ideal: no data" });
+      infoLines.push({ text: "Now: no data" });
+      infoLines.push({ text: "Window: not applicable" });
+    }
+  } else if (selectedPlanet) {
+    const dvEstimate = getCurrentDvEstimate(selectedPlanet);
+    const windowEstimate = findNextTransferWindow(selectedPlanet);
+
+    if (dvEstimate) {
+      const idealWithMargin = applyMargin(dvEstimate.baseDv, marginPercent);
+      const nowWithMargin = applyMargin(dvEstimate.estimatedDv, marginPercent);
+
+      infoLines.push({ text: `Ideal: ${idealWithMargin} m/s`, margin: true });
+      infoLines.push({ text: `Now: ${nowWithMargin} m/s`, margin: true });
+
+      if (windowEstimate) {
+        const windowText = windowEstimate.timeFromNow === 0
+          ? "now"
+          : formatDuration(windowEstimate.timeFromNow);
+
+        infoLines.push({ text: `Window in: ${windowText}` });
+        infoLines.push({ text: `Window time: ${formatKspTime(windowEstimate.time)}` });
+      }
+    } else {
+      const baseDv = getBaseDvToPlanet(selectedPlanet);
+      const idealWithMargin = applyMargin(baseDv, marginPercent);
+
+      infoLines.push({ text: `Ideal: ${idealWithMargin ?? "-"} m/s`, margin: true });
+      infoLines.push({ text: "Now: no data" });
+      infoLines.push({ text: "Window: no data" });
+    }
+  }
+
+  ctx.font = "16px Arial";
+
+  let maxWidth = 0;
+
+  infoLines.forEach(line => {
+    const textWidth = ctx.measureText(line.text).width;
+    if (textWidth > maxWidth) maxWidth = textWidth;
+  });
+    
 const panelX = 10;
 const panelY = 10;
 const panelPaddingX = 10;

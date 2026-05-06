@@ -1914,55 +1914,29 @@ function drawPlanets(centerX, centerY) {
   });
 }
 
-// render loop
-function draw() {
-  updateRealtimeMotion();
-  updateResetAnimation();
-  drawSpaceBackground();
+function drawInfoPanel() {
+  const infoLines = [];
+  const hasInfoTarget = selectedTargetType === "kerbol" || selectedPlanet;
 
-  // střed (Slunce)
-  const centerX = canvas.width / 2;
-  const centerY = canvas.height / 2;
+  if (viewModeButton) {
+    viewModeButton.classList.toggle("withPanel", hasInfoTarget);
+    viewModeButton.classList.toggle("compact", !hasInfoTarget);
+  }
 
-  // ☀️ Sun
-  drawKerbol(centerX, centerY);
+  if (marginInput) {
+    marginInput.parentElement.style.display = hasInfoTarget ? "flex" : "none";
+  }
 
-  // 🟢 ORBITY
-  drawOrbits(centerX, centerY);
+  if (!hasInfoTarget) return;
 
-  // 🚀 TRANSFER LINE
-  drawTransferLine(centerX, centerY);
-
-  // 👻 IDEAL WINDOW GHOST POSITION
-  drawGhostTransferPosition(centerX, centerY);
-
-  drawPlanetTrails(centerX, centerY);
-
-  drawPlanets(centerX, centerY);
-
-const infoLines = [];
-
-const hasInfoTarget = selectedTargetType === "kerbol" || selectedPlanet;
-
-if (viewModeButton) {
-  viewModeButton.classList.toggle("withPanel", hasInfoTarget);
-  viewModeButton.classList.toggle("compact", !hasInfoTarget);
-}
-
-if (marginInput) {
-  marginInput.parentElement.style.display = hasInfoTarget ? "flex" : "none";
-}
-
-if (hasInfoTarget) {
   if (selectedTargetType === "kerbol") {
     const baseDv = selectedOrigin === "Kerbin" ? getBaseDvToTarget("Kerbol") : null;
 
     if (baseDv !== null) {
       const idealWithMargin = applyMargin(baseDv, marginPercent);
-
       infoLines.push({ text: `Ideal: ${idealWithMargin} m/s`, margin: true });
       infoLines.push({ text: `Now: ${idealWithMargin} m/s`, margin: true });
-      infoLines.push({ text: selectedOrigin === "Kerbin" ? "Window: anytime" : "Window: not applicable" });
+      infoLines.push({ text: "Window: anytime" });
     } else {
       infoLines.push({ text: "Ideal: no data" });
       infoLines.push({ text: "Now: no data" });
@@ -2005,46 +1979,73 @@ if (hasInfoTarget) {
     const textWidth = ctx.measureText(line.text).width;
     if (textWidth > maxWidth) maxWidth = textWidth;
   });
-    
-const panelX = 10;
-const panelY = 10;
-const panelPaddingX = 10;
-const panelPaddingY = 40;
-const lineHeight = 25;
 
-const panelWidth = maxWidth + panelPaddingX * 2;
-const panelHeight = infoLines.length * lineHeight + panelPaddingY;
+  const panelX = 10;
+  const panelY = 10;
+  const panelPaddingX = 10;
+  const panelPaddingY = 40;
+  const lineHeight = 25;
 
-ctx.save();
+  const panelWidth = maxWidth + panelPaddingX * 2;
+  const panelHeight = infoLines.length * lineHeight + panelPaddingY;
 
-ctx.fillStyle = "rgba(0, 0, 0, 0.48)";
-ctx.strokeStyle = "rgba(255,255,255,0.15)";
-ctx.lineWidth = 1;
+  ctx.save();
+  ctx.fillStyle = "rgba(0, 0, 0, 0.48)";
+  ctx.strokeStyle = "rgba(255,255,255,0.15)";
+  ctx.lineWidth = 1;
 
-ctx.beginPath();
-ctx.roundRect(panelX, panelY, panelWidth, panelHeight, 8);
-ctx.fill();
-ctx.stroke();
+  ctx.beginPath();
+  ctx.roundRect(panelX, panelY, panelWidth, panelHeight, 8);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 
-ctx.restore();
+  ctx.font = "16px Arial";
+  ctx.textAlign = "left";
 
-ctx.font = "16px Arial";
-ctx.textAlign = "left";
+  let infoY = panelY + 25;
 
-let infoY = panelY + 25;
+  infoLines.forEach(line => {
+    ctx.fillStyle = line.dim ? "rgba(255,255,255,0.65)" : "white";
 
-infoLines.forEach(line => {
-  ctx.fillStyle = line.dim ? "rgba(255,255,255,0.65)" : "white";
+    if (line.margin && marginPercent > 0) {
+      drawTextWithMargin(line.text, panelX + panelPaddingX, infoY, marginPercent);
+    } else {
+      ctx.fillText(line.text, panelX + panelPaddingX, infoY);
+    }
 
-  if (line.margin && marginPercent > 0) {
-    drawTextWithMargin(line.text, panelX + panelPaddingX, infoY, marginPercent);
-  } else {
-    ctx.fillText(line.text, panelX + panelPaddingX, infoY);
-  }
-
-  infoY += lineHeight;
-});
+    infoY += lineHeight;
+  });
 }
+
+// render loop
+function draw() {
+  updateRealtimeMotion();
+  updateResetAnimation();
+  drawSpaceBackground();
+
+  // střed (Slunce)
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  // ☀️ Sun
+  drawKerbol(centerX, centerY);
+
+  // 🟢 ORBITY
+  drawOrbits(centerX, centerY);
+
+  // 🚀 TRANSFER LINE
+  drawTransferLine(centerX, centerY);
+
+  // 👻 IDEAL WINDOW GHOST POSITION
+  drawGhostTransferPosition(centerX, centerY);
+
+  drawPlanetTrails(centerX, centerY);
+
+  drawPlanets(centerX, centerY);
+
+  drawInfoPanel();
+
   if (showDebugPanel) {
     drawDebugPanel();
   }
